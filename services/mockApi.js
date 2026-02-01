@@ -123,7 +123,7 @@ export const processWithdrawal = async (employeeId, amount) => {
         id: `TXN${Date.now()}`,
         amount,
         fee,
-        netAmount: amount - fee,
+        netAmount: amount, // Thực nhận = Số tiền nhập (phí trừ vào hạn mức, không trừ vào tiền nhận)
         status: 'SUCCESS',
         createdAt: new Date().toISOString(),
         bankName: employee.linkedBank?.bankCode || 'N/A',

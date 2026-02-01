@@ -15,7 +15,7 @@ import { View, ActivityIndicator } from 'react-native';
 SplashScreen.preventAutoHideAsync();
 
 function RootLayoutNav() {
-    const { user, isLoading } = useAuth();
+    const { user, isLoading, isLoggingOut } = useAuth();
     const segments = useSegments();
     const router = useRouter();
 
@@ -27,11 +27,12 @@ function RootLayoutNav() {
         if (!user && !inAuthGroup) {
             // Chưa đăng nhập và không ở màn auth -> redirect về login
             router.replace('/login');
-        } else if (user && inAuthGroup) {
+        } else if (user && inAuthGroup && !isLoggingOut) {
             // Đã đăng nhập mà đang ở màn auth -> redirect về home
+            // CHỈ redirect nếu KHÔNG đang trong quá trình logout
             router.replace('/');
         }
-    }, [user, isLoading, segments]);
+    }, [user, isLoading, segments, isLoggingOut]);
 
     if (isLoading) {
         return (
@@ -49,6 +50,7 @@ function RootLayoutNav() {
             <Stack.Screen name="withdraw" />
             <Stack.Screen name="link-bank" />
             <Stack.Screen name="history" />
+            <Stack.Screen name="success" />
         </Stack>
     );
 }

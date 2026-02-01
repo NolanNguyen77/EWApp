@@ -1,6 +1,6 @@
 // Màn hình Rút tiền
-import { View, Text, TouchableOpacity, SafeAreaView, StatusBar, TextInput, ScrollView, ActivityIndicator, KeyboardAvoidingView, Platform, Alert } from 'react-native';
-import { ArrowLeft, Wallet, AlertCircle, Check, CreditCard } from 'lucide-react-native';
+import { View, Text, TouchableOpacity, SafeAreaView, StatusBar, TextInput, ScrollView, ActivityIndicator, KeyboardAvoidingView, Platform, Modal } from 'react-native';
+import { ArrowLeft, Wallet, AlertCircle, Check, CreditCard, Shield, Clock, DollarSign, TrendingDown, X } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
@@ -17,6 +17,7 @@ export default function WithdrawScreen() {
     const [isProcessing, setIsProcessing] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState(false);
+    const [showConfirmModal, setShowConfirmModal] = useState(false);
 
     useEffect(() => {
         if (user) {
@@ -50,13 +51,19 @@ export default function WithdrawScreen() {
 
     const numericAmount = parseInt(amount) || 0;
     const totalDeduction = numericAmount + fee;
-    const netReceived = numericAmount - fee;
+    const netReceived = numericAmount; // Thực nhận = Số tiền nhập (phí trừ riêng vào hạn mức)
     const isOverLimit = totalDeduction > limit;
     const canWithdraw = numericAmount > 0 && !isOverLimit && user?.linkedBank;
+    const newLimitAfterWithdraw = limit - totalDeduction;
+
+    // Hiển thị Modal xác nhận
+    const showConfirmation = () => {
+        if (!canWithdraw) return;
+        setShowConfirmModal(true);
+    };
 
     const handleWithdraw = async () => {
-        if (!canWithdraw) return;
-
+        setShowConfirmModal(false);
         setError('');
         setIsProcessing(true);
 
@@ -65,17 +72,21 @@ export default function WithdrawScreen() {
 
             if (result.success) {
                 setSuccess(true);
-                // Cập nhật user với hạn mức mới
-                const updatedEmployee = MOCK_EMPLOYEES[user.id];
-                await updateUser(updatedEmployee);
 
-                // Hiển thị thông báo thành công
+                // Navigate tới màn Success với params + thời gian giao dịch
                 setTimeout(() => {
-                    Alert.alert(
-                        'Rút tiền thành công! 🎉',
-                        `Số tiền ${formatCurrency(numericAmount)}đ đã được chuyển về tài khoản của bạn.`,
-                        [{ text: 'OK', onPress: () => router.back() }]
-                    );
+                    router.replace({
+                        pathname: '/success',
+                        params: {
+                            amount: numericAmount,
+                            fee: fee,
+                            netAmount: numericAmount,
+                            newLimit: result.data.newLimit,
+                            transactionId: result.data.transaction.id,
+                            bankName: user.linkedBank?.bankCode || 'N/A',
+                            transactionTime: new Date().toISOString() // Thêm thời gian giao dịch
+                        }
+                    });
                 }, 500);
             } else {
                 setError(result.error);
@@ -155,8 +166,8 @@ export default function WithdrawScreen() {
                             <TouchableOpacity
                                 key={quickAmount}
                                 className={`px-4 py-2 rounded-lg border ${parseInt(amount) === quickAmount
-                                        ? 'bg-primary border-primary'
-                                        : 'bg-white border-slate-200'
+                                    ? 'bg-primary border-primary'
+                                    : 'bg-white border-slate-200'
                                     }`}
                                 onPress={() => setAmount(quickAmount.toString())}
                             >
@@ -212,7 +223,7 @@ export default function WithdrawScreen() {
                     <TouchableOpacity
                         className={`py-4 rounded-xl items-center flex-row justify-center ${canWithdraw && !isProcessing ? 'bg-emerald-500' : 'bg-slate-300'
                             }`}
-                        onPress={handleWithdraw}
+                        onPress={showConfirmation}
                         disabled={!canWithdraw || isProcessing}
                     >
                         {isProcessing ? (
@@ -232,6 +243,100 @@ export default function WithdrawScreen() {
 
                 </ScrollView>
             </KeyboardAvoidingView>
+
+            {/* Confirmation Modal */}
+            <Modal
+                visible={showConfirmModal}
+                transparent={true}
+                animationType="fade"
+                onRequestClose={() => setShowConfirmModal(false)}
+            >
+                <View className="flex-1 bg-black/50 justify-center items-center px-6">
+                    <View className="bg-white w-full rounded-2xl overflow-hidden shadow-2xl">
+                        {/* Modal Header */}
+                        <View className="bg-primary p-5 flex-row items-center justify-between">
+                            <View className="flex-row items-center">
+                                <Shield color="white" size={24} />
+                                <Text className="text-white font-heading text-lg ml-2">Xác nhận giao dịch</Text>
+                            </View>
+                            <TouchableOpacity onPress={() => setShowConfirmModal(false)}>
+                                <X color="white" size={24} />
+                            </TouchableOpacity>
+                        </View>
+
+                        {/* Modal Body */}
+                        <View className="p-5">
+                            {/* Amount Display */}
+                            <View className="items-center mb-5 pb-5 border-b border-slate-100">
+                                <Text className="text-slate-500 text-sm mb-1">Số tiền rút</Text>
+                                <Text className="text-primary font-heading text-3xl">{formatCurrency(numericAmount)}</Text>
+                            </View>
+
+                            {/* Transaction Details */}
+                            <View className="bg-slate-50 rounded-xl p-4 mb-5">
+                                <View className="flex-row items-center justify-between py-2">
+                                    <View className="flex-row items-center">
+                                        <DollarSign color="#64748B" size={18} />
+                                        <Text className="text-slate-600 ml-2">Phí giao dịch</Text>
+                                    </View>
+                                    <Text className="text-slate-800 font-semibold">{formatCurrency(fee)}</Text>
+                                </View>
+                                <View className="h-px bg-slate-200 my-2" />
+                                <View className="flex-row items-center justify-between py-2">
+                                    <View className="flex-row items-center">
+                                        <TrendingDown color="#64748B" size={18} />
+                                        <Text className="text-slate-600 ml-2">Tổng trừ hạn mức</Text>
+                                    </View>
+                                    <Text className="text-red-500 font-semibold">{formatCurrency(totalDeduction)}</Text>
+                                </View>
+                                <View className="h-px bg-slate-200 my-2" />
+                                <View className="flex-row items-center justify-between py-2">
+                                    <View className="flex-row items-center">
+                                        <Wallet color="#64748B" size={18} />
+                                        <Text className="text-slate-600 ml-2">Hạn mức còn lại</Text>
+                                    </View>
+                                    <Text className="text-emerald-600 font-bold">{formatCurrency(newLimitAfterWithdraw)}</Text>
+                                </View>
+                            </View>
+
+                            {/* Bank Info */}
+                            <View className="flex-row items-center bg-primary-50 p-3 rounded-xl mb-5">
+                                <CreditCard color="#4F46E5" size={20} />
+                                <View className="ml-3">
+                                    <Text className="text-slate-500 text-xs">Tài khoản nhận</Text>
+                                    <Text className="text-slate-800 font-semibold">
+                                        {user?.linkedBank?.bankCode} - ****{user?.linkedBank?.accountNo?.slice(-4)}
+                                    </Text>
+                                </View>
+                            </View>
+
+                            {/* Action Buttons */}
+                            <View className="flex-row gap-3">
+                                <TouchableOpacity
+                                    className="flex-1 py-4 rounded-xl border border-slate-200 items-center"
+                                    onPress={() => setShowConfirmModal(false)}
+                                >
+                                    <Text className="text-slate-600 font-semibold">Hủy</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    className="flex-1 py-4 rounded-xl bg-emerald-500 items-center flex-row justify-center"
+                                    onPress={handleWithdraw}
+                                    disabled={isProcessing}
+                                >
+                                    {isProcessing ? (
+                                        <ActivityIndicator color="white" size="small" />
+                                    ) : (
+                                        <>
+                                            <Check color="white" size={20} />
+                                            <Text className="text-white font-bold ml-2">Xác nhận</Text>
+                                        </>
+                                    )}
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
         </SafeAreaView>
     );
 }

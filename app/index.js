@@ -23,9 +23,8 @@ export default function HomeScreen() {
         if (freshEmployee) {
             const newLimit = calculateLimit(freshEmployee);
             setLimit(newLimit);
-
-            // Cập nhật user trong context
-            await updateUser(freshEmployee);
+            // Không gọi updateUser ở đây để tránh infinite loop
+            // Data sẽ được sync lại khi refresh hoặc navigate
         }
 
         // Lấy lịch sử giao dịch
@@ -33,7 +32,7 @@ export default function HomeScreen() {
         if (historyResult.success) {
             setRecentTransactions(historyResult.data.slice(0, 3)); // 3 giao dịch gần nhất
         }
-    }, [user]);
+    }, [user?.id]); // Chỉ phụ thuộc vào user.id, không phải toàn bộ user object
 
     useEffect(() => {
         loadData();
@@ -47,6 +46,10 @@ export default function HomeScreen() {
 
     const handleLogout = async () => {
         await logout();
+        // Small delay to ensure state update propagates
+        setTimeout(() => {
+            router.replace('/login');
+        }, 100);
     };
 
     const formatCurrency = (amount) => {
@@ -76,10 +79,15 @@ export default function HomeScreen() {
                     </View>
                 </View>
                 <View className="flex-row gap-2">
-                    <TouchableOpacity className="p-2 bg-slate-100 rounded-full">
+                    <TouchableOpacity className="p-2 bg-slate-100 rounded-full" activeOpacity={0.7}>
                         <Bell color="#64748B" size={20} />
                     </TouchableOpacity>
-                    <TouchableOpacity className="p-2 bg-red-50 rounded-full" onPress={handleLogout}>
+                    <TouchableOpacity
+                        className="p-3 bg-red-50 rounded-full"
+                        onPress={handleLogout}
+                        activeOpacity={0.7}
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    >
                         <LogOut color="#EF4444" size={20} />
                     </TouchableOpacity>
                 </View>

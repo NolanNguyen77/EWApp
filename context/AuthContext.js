@@ -15,6 +15,7 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [isLoggingOut, setIsLoggingOut] = useState(false);
 
     // Load session từ AsyncStorage khi app khởi động
     useEffect(() => {
@@ -23,6 +24,11 @@ export const AuthProvider = ({ children }) => {
 
     const loadSession = async () => {
         try {
+            // Không load lại session nếu đang trong quá trình logout
+            if (isLoggingOut) {
+                setIsLoading(false);
+                return;
+            }
             const savedUser = await AsyncStorage.getItem('currentUser');
             if (savedUser) {
                 setUser(JSON.parse(savedUser));
@@ -36,6 +42,7 @@ export const AuthProvider = ({ children }) => {
 
     const login = async (userData) => {
         try {
+            setIsLoggingOut(false); // Reset logout flag when logging in
             await AsyncStorage.setItem('currentUser', JSON.stringify(userData));
             setUser(userData);
         } catch (error) {
@@ -45,20 +52,23 @@ export const AuthProvider = ({ children }) => {
 
     const logout = async () => {
         try {
+            setIsLoggingOut(true); // Set flag trước khi clear
+            setUser(null); // Clear user state ngay lập tức
             await AsyncStorage.removeItem('currentUser');
-            setUser(null);
         } catch (error) {
             console.error('Clear session error:', error);
+            setIsLoggingOut(false);
         }
     };
 
     const updateUser = async (updates) => {
+        if (isLoggingOut) return; // Không update nếu đang logout
         const updatedUser = { ...user, ...updates };
         await login(updatedUser);
     };
 
     return (
-        <AuthContext.Provider value={{ user, isLoading, login, logout, updateUser }}>
+        <AuthContext.Provider value={{ user, isLoading, isLoggingOut, login, logout, updateUser }}>
             {children}
         </AuthContext.Provider>
     );
