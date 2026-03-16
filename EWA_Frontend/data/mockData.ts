@@ -1,5 +1,5 @@
-// Mock Data cho Sprint 1 EWApp
-// Dữ liệu giả lập nhân viên, ngân hàng, và giao dịch
+// Mock Data cho EWApp
+// Dữ liệu giả lập nhân viên, ngân hàng, giao dịch, nhà mạng, và hóa đơn
 
 export const MOCK_EMPLOYEES = {
     'NV001': {
@@ -74,10 +74,100 @@ export const MOCK_BANK_ACCOUNTS = {
     'ACB-9999888877': 'PHAM THI D', // Edge case: User lương thấp
 };
 
+// ========== SPRINT 2: Nhà mạng & Nạp tiền ==========
+export const MOCK_CARRIERS = {
+    VIETTEL: {
+        name: 'Viettel',
+        prefixes: ['032', '033', '034', '035', '036', '037', '038', '039', '086', '096', '097', '098'],
+        color: '#E6232A',
+    },
+    VINAPHONE: {
+        name: 'Vinaphone',
+        prefixes: ['081', '082', '083', '084', '085', '088', '091', '094'],
+        color: '#005BAA',
+    },
+    MOBIFONE: {
+        name: 'Mobifone',
+        prefixes: ['070', '076', '077', '078', '079', '089', '090', '093'],
+        color: '#1C75BC',
+    },
+};
+
+export const TOPUP_DENOMINATIONS = [10000, 20000, 50000, 100000, 200000, 500000];
+
+// ========== SPRINT 2: Hóa đơn (Điện / Nước) ==========
+export const MOCK_BILLS = {
+    'EVN-PE01234567': {
+        customerName: 'Nguyễn Văn A',
+        address: '123 Lê Lợi, Q.1, TP.HCM',
+        amount: 350000,
+        serviceType: 'ELECTRIC',
+        provider: 'EVN HCM',
+        period: '02/2026',
+        status: 'UNPAID',
+    },
+    'EVN-PE09876543': {
+        customerName: 'Trần Thị B',
+        address: '456 Nguyễn Huệ, Q.3, TP.HCM',
+        amount: 180000,
+        serviceType: 'ELECTRIC',
+        provider: 'EVN HCM',
+        period: '02/2026',
+        status: 'UNPAID',
+    },
+    'WATER-DN001234': {
+        customerName: 'Nguyễn Văn A',
+        address: '123 Lê Lợi, Q.1, TP.HCM',
+        amount: 95000,
+        serviceType: 'WATER',
+        provider: 'Sawaco',
+        period: '02/2026',
+        status: 'UNPAID',
+    },
+    'WATER-DN005678': {
+        customerName: 'Phạm Thị D',
+        address: '789 CMT8, Q.10, TP.HCM',
+        amount: 62000,
+        serviceType: 'WATER',
+        provider: 'Sawaco',
+        period: '02/2026',
+        status: 'UNPAID',
+    },
+    'EVN-PE00000001': {
+        customerName: 'Lê Văn C',
+        address: '100 Hai Bà Trưng, Q.1',
+        amount: 0,
+        serviceType: 'ELECTRIC',
+        provider: 'EVN HCM',
+        period: '02/2026',
+        status: 'PAID',
+    },
+    'EVN-PE99999999': {
+        customerName: 'Khách hàng Nợ Lớn',
+        address: '999 Đường Vô Tận, Q.12',
+        amount: 50000000, // 50 triệu - Vượt hạn mức chắc chắn
+        serviceType: 'ELECTRIC',
+        provider: 'EVN HCM',
+        period: '02/2026',
+        status: 'UNPAID',
+    },
+    'WATER-ZERO-001': {
+        customerName: 'Khách hàng Nợ 0đ',
+        address: '10 Đường Số 1, Q.7',
+        amount: 0,
+        serviceType: 'WATER',
+        provider: 'Sawaco',
+        period: '02/2026',
+        status: 'UNPAID', // Chưa thanh toán nhưng nợ 0đ
+    },
+};
+
+// ========== Lịch sử giao dịch (Sprint 2: thêm field type) ==========
 export const MOCK_TRANSACTIONS = {
     'NV001': [
         {
             id: 'TXN001',
+            type: 'WITHDRAWAL',
             amount: 1000000,
             fee: 10000,
             netAmount: 1000000,
@@ -87,6 +177,7 @@ export const MOCK_TRANSACTIONS = {
         },
         {
             id: 'TXN002',
+            type: 'WITHDRAWAL',
             amount: 1000000,
             fee: 10000,
             netAmount: 1000000,
@@ -94,8 +185,43 @@ export const MOCK_TRANSACTIONS = {
             createdAt: '2026-01-25T14:15:00',
             bankName: 'Vietcombank',
         },
+        {
+            id: 'TXN003',
+            type: 'TOPUP',
+            amount: 50000,
+            fee: 0,
+            netAmount: 50000,
+            status: 'SUCCESS',
+            createdAt: '2026-02-01T09:00:00',
+            phoneNumber: '0901234567',
+            carrier: 'Mobifone',
+        },
+        {
+            id: 'TXN004',
+            type: 'BILL_PAYMENT',
+            amount: 350000,
+            fee: 0,
+            netAmount: 350000,
+            status: 'SUCCESS',
+            createdAt: '2026-02-03T11:20:00',
+            serviceType: 'ELECTRIC',
+            provider: 'EVN HCM',
+            customerId: 'PE01234567',
+        },
     ],
     'NV002': [],
+    'NV003': [
+        {
+            id: 'TXN_EDGE_001',
+            type: 'WITHDRAWAL',
+            amount: 2262000,
+            fee: 10000,
+            netAmount: 2262000,
+            status: 'SUCCESS',
+            createdAt: '2026-02-14T10:00:00',
+            bankName: 'MB Bank',
+        }
+    ],
 };
 
 // Hằng số nghiệp vụ

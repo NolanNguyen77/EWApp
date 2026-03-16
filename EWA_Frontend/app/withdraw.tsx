@@ -79,6 +79,7 @@ export default function WithdrawScreen() {
                     router.replace({
                         pathname: '/success',
                         params: {
+                            transactionType: 'WITHDRAWAL',
                             amount: numericAmount,
                             fee: fee,
                             netAmount: numericAmount,

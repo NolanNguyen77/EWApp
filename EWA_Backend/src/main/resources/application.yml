@@ -34,3 +34,4 @@ logging:
             servlet: DEBUG
 jwt:
   secret: d0eff2cc4fd31183d73bd1ad913f228d33fb429340012133c7f5f05655bd4042
+  expiration: 86400000

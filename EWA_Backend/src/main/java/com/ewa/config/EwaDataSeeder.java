@@ -11,17 +11,21 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @Configuration
 @RequiredArgsConstructor
 public class EwaDataSeeder {
 
     private final DataSeederService dataSeederService;
+    private final TransactionTemplate transactionTemplate;
 
     @Bean
     public CommandLineRunner loadData() {
-        return args -> dataSeederService.seedIfEmpty();
+        return args -> transactionTemplate.execute(status -> {
+            dataSeederService.seedIfEmpty();
+            return null;
+        });
     }
 
     @Component
@@ -31,7 +35,6 @@ public class EwaDataSeeder {
         private final EntityManager entityManager;
         private final EmployeeRepository employeeRepository;
 
-        @Transactional
         public void seedIfEmpty() {
             if (employeeRepository.count() == 0) {
                 // Create dummy employer
@@ -60,6 +63,34 @@ public class EwaDataSeeder {
                 employeeRepository.save(nv002);
 
                 System.out.println("✅ Seeded dummy employees NV001 and NV002");
+            }
+
+            if (employeeRepository.findByEmployeeCode("NV003").isEmpty()) {
+                Employer employer = employeeRepository.findByEmployeeCode("NV001").map(Employee::getEmployer).orElse(null);
+                if (employer != null) {
+                    Employee nv003 = new Employee();
+                    nv003.setEmployeeCode("NV003");
+                    nv003.setFullName("Lê Văn C");
+                    nv003.setPhone("0912345678");
+                    nv003.setEmployer(employer);
+                    nv003.setStatus(EmployeeStatus.ACTIVE);
+                    employeeRepository.save(nv003);
+                    System.out.println("✅ Seeded dummy employee NV003");
+                }
+            }
+
+            if (employeeRepository.findByEmployeeCode("NV004").isEmpty()) {
+                Employer employer = employeeRepository.findByEmployeeCode("NV001").map(Employee::getEmployer).orElse(null);
+                if (employer != null) {
+                    Employee nv004 = new Employee();
+                    nv004.setEmployeeCode("NV004");
+                    nv004.setFullName("Phạm Thị D");
+                    nv004.setPhone("0987654321");
+                    nv004.setEmployer(employer);
+                    nv004.setStatus(EmployeeStatus.ACTIVE);
+                    employeeRepository.save(nv004);
+                    System.out.println("✅ Seeded dummy employee NV004");
+                }
             }
         }
     }

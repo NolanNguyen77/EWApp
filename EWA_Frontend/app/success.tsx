@@ -1,6 +1,6 @@
-// Màn hình Xác nhận giao dịch thành công
+// Màn hình Xác nhận giao dịch thành công (Sprint 2: hỗ trợ nhiều loại GD)
 import { View, Text, TouchableOpacity, SafeAreaView, StatusBar } from 'react-native';
-import { CheckCircle, ArrowRight, Home, Copy, Clock } from 'lucide-react-native';
+import { CheckCircle, Home, Copy, Clock, Smartphone, FileText, Wallet } from 'lucide-react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import * as Clipboard from 'expo-clipboard';
@@ -10,7 +10,18 @@ export default function SuccessScreen() {
     const params = useLocalSearchParams();
     const [copied, setCopied] = useState(false);
 
-    const { amount, fee, netAmount, newLimit, transactionId, bankName, transactionTime } = params;
+    const {
+        transactionType,
+        amount, fee, netAmount, newLimit, transactionId, transactionTime,
+        // Withdrawal params
+        bankName,
+        // Top-up params
+        phoneNumber, carrier,
+        // Bill Payment params
+        serviceType, provider, customerName, customerId,
+    } = params;
+
+    const type = (transactionType as string) || 'WITHDRAWAL';
 
     const formatCurrency = (value) => {
         return new Intl.NumberFormat('vi-VN').format(value || 0) + ' ₫';
@@ -18,7 +29,7 @@ export default function SuccessScreen() {
 
     const formatDateTime = (isoString) => {
         if (!isoString) return 'N/A';
-        const date = new Date(isoString);
+        const date = new Date(isoString as string);
         return date.toLocaleString('vi-VN', {
             day: '2-digit',
             month: '2-digit',
@@ -31,7 +42,7 @@ export default function SuccessScreen() {
 
     const handleCopyTransactionId = async () => {
         if (transactionId) {
-            await Clipboard.setStringAsync(transactionId);
+            await Clipboard.setStringAsync(transactionId as string);
             setCopied(true);
             setTimeout(() => setCopied(false), 2000);
         }
@@ -41,42 +52,128 @@ export default function SuccessScreen() {
         router.replace('/');
     };
 
+    // Config dựa trên loại giao dịch
+    const typeConfig = {
+        WITHDRAWAL: {
+            bgColor: 'bg-emerald-500',
+            title: 'Rút tiền thành công!',
+            subtitle: 'Tiền đã được chuyển về tài khoản của bạn',
+            amountLabel: 'Số tiền thực nhận',
+            amountColor: 'text-emerald-600',
+            iconColor: '#10B981',
+            Icon: Wallet,
+        },
+        TOPUP: {
+            bgColor: 'bg-orange-500',
+            title: 'Nạp tiền thành công!',
+            subtitle: 'Tài khoản điện thoại đã được nạp tiền',
+            amountLabel: 'Mệnh giá đã nạp',
+            amountColor: 'text-orange-600',
+            iconColor: '#F97316',
+            Icon: Smartphone,
+        },
+        BILL_PAYMENT: {
+            bgColor: 'bg-violet-500',
+            title: 'Thanh toán thành công!',
+            subtitle: 'Hóa đơn đã được thanh toán',
+            amountLabel: 'Số tiền đã thanh toán',
+            amountColor: 'text-violet-600',
+            iconColor: '#7C3AED',
+            Icon: FileText,
+        },
+    };
+
+    const config = typeConfig[type] || typeConfig.WITHDRAWAL;
+
     return (
-        <SafeAreaView className="flex-1 bg-emerald-500">
+        <SafeAreaView className={`flex-1 ${config.bgColor}`}>
             <StatusBar barStyle="light-content" />
 
             <View className="flex-1 items-center justify-center px-6">
                 {/* Success Icon */}
                 <View className="w-28 h-28 bg-white rounded-full items-center justify-center mb-6 shadow-lg">
-                    <CheckCircle color="#10B981" size={64} strokeWidth={2} />
+                    <CheckCircle color={config.iconColor} size={64} strokeWidth={2} />
                 </View>
 
                 {/* Success Title */}
-                <Text className="text-white font-heading text-3xl mb-2">Giao dịch thành công!</Text>
-                <Text className="text-emerald-100 text-base mb-8">Tiền đã được chuyển về tài khoản của bạn</Text>
+                <Text className="text-white font-heading text-3xl mb-2">{config.title}</Text>
+                <Text className="text-white/80 text-base mb-8">{config.subtitle}</Text>
 
                 {/* Transaction Details Card */}
                 <View className="bg-white w-full rounded-2xl p-6 shadow-xl mb-6">
                     {/* Amount */}
                     <View className="items-center mb-6 pb-6 border-b border-slate-100">
-                        <Text className="text-slate-500 text-sm mb-1">Số tiền thực nhận</Text>
-                        <Text className="text-emerald-600 font-heading text-4xl">{formatCurrency(netAmount)}</Text>
+                        <Text className="text-slate-500 text-sm mb-1">{config.amountLabel}</Text>
+                        <Text className={`${config.amountColor} font-heading text-4xl`}>{formatCurrency(netAmount)}</Text>
                     </View>
 
                     {/* Details */}
                     <View className="space-y-3">
-                        <View className="flex-row justify-between py-2">
-                            <Text className="text-slate-500">Số tiền rút</Text>
-                            <Text className="text-slate-800 font-medium">{formatCurrency(amount)}</Text>
-                        </View>
-                        <View className="flex-row justify-between py-2">
-                            <Text className="text-slate-500">Phí giao dịch</Text>
-                            <Text className="text-slate-800 font-medium">{formatCurrency(fee)}</Text>
-                        </View>
-                        <View className="flex-row justify-between py-2">
-                            <Text className="text-slate-500">Ngân hàng nhận</Text>
-                            <Text className="text-slate-800 font-medium">{bankName || 'N/A'}</Text>
-                        </View>
+                        {/* Type-specific details */}
+                        {type === 'WITHDRAWAL' && (
+                            <>
+                                <View className="flex-row justify-between py-2">
+                                    <Text className="text-slate-500">Số tiền rút</Text>
+                                    <Text className="text-slate-800 font-medium">{formatCurrency(amount)}</Text>
+                                </View>
+                                <View className="flex-row justify-between py-2">
+                                    <Text className="text-slate-500">Phí giao dịch</Text>
+                                    <Text className="text-slate-800 font-medium">{formatCurrency(fee)}</Text>
+                                </View>
+                                <View className="flex-row justify-between py-2">
+                                    <Text className="text-slate-500">Ngân hàng nhận</Text>
+                                    <Text className="text-slate-800 font-medium">{bankName || 'N/A'}</Text>
+                                </View>
+                            </>
+                        )}
+
+                        {type === 'TOPUP' && (
+                            <>
+                                <View className="flex-row justify-between py-2">
+                                    <Text className="text-slate-500">Mệnh giá</Text>
+                                    <Text className="text-slate-800 font-medium">{formatCurrency(amount)}</Text>
+                                </View>
+                                <View className="flex-row justify-between py-2">
+                                    <Text className="text-slate-500">Số điện thoại</Text>
+                                    <Text className="text-slate-800 font-medium">{phoneNumber || 'N/A'}</Text>
+                                </View>
+                                <View className="flex-row justify-between py-2">
+                                    <Text className="text-slate-500">Nhà mạng</Text>
+                                    <Text className="text-slate-800 font-medium">{carrier || 'N/A'}</Text>
+                                </View>
+                                <View className="flex-row justify-between py-2">
+                                    <Text className="text-slate-500">Phí giao dịch</Text>
+                                    <Text className="text-emerald-600 font-bold">Miễn phí</Text>
+                                </View>
+                            </>
+                        )}
+
+                        {type === 'BILL_PAYMENT' && (
+                            <>
+                                <View className="flex-row justify-between py-2">
+                                    <Text className="text-slate-500">Loại dịch vụ</Text>
+                                    <Text className="text-slate-800 font-medium">
+                                        {serviceType === 'ELECTRIC' ? '⚡ Điện' : '💧 Nước'}
+                                    </Text>
+                                </View>
+                                <View className="flex-row justify-between py-2">
+                                    <Text className="text-slate-500">Khách hàng</Text>
+                                    <Text className="text-slate-800 font-medium">{customerName || 'N/A'}</Text>
+                                </View>
+                                <View className="flex-row justify-between py-2">
+                                    <Text className="text-slate-500">Mã KH</Text>
+                                    <Text className="text-slate-800 font-medium">{customerId || 'N/A'}</Text>
+                                </View>
+                                <View className="flex-row justify-between py-2">
+                                    <Text className="text-slate-500">Nhà cung cấp</Text>
+                                    <Text className="text-slate-800 font-medium">{provider || 'N/A'}</Text>
+                                </View>
+                                <View className="flex-row justify-between py-2">
+                                    <Text className="text-slate-500">Phí giao dịch</Text>
+                                    <Text className="text-emerald-600 font-bold">Miễn phí</Text>
+                                </View>
+                            </>
+                        )}
 
                         {/* Transaction Time */}
                         <View className="flex-row justify-between py-2">
@@ -116,8 +213,8 @@ export default function SuccessScreen() {
                     onPress={handleGoHome}
                     activeOpacity={0.8}
                 >
-                    <Home color="#10B981" size={24} />
-                    <Text className="text-emerald-600 font-bold text-lg ml-2">Về trang chủ</Text>
+                    <Home color={config.iconColor} size={24} />
+                    <Text className="font-bold text-lg ml-2" style={{ color: config.iconColor }}>Về trang chủ</Text>
                 </TouchableOpacity>
             </View>
         </SafeAreaView>

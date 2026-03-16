@@ -1,10 +1,41 @@
-// Màn hình Home - Hiển thị hạn mức và thao tác rút tiền
+// Màn hình Home - Hiển thị hạn mức và thao tác nhanh
 import { View, Text, TouchableOpacity, SafeAreaView, StatusBar, ScrollView, RefreshControl } from 'react-native';
-import { Bell, History, Menu, DollarSign, CreditCard, LogOut, ChevronRight, Wallet } from 'lucide-react-native';
+import { Bell, History, DollarSign, CreditCard, LogOut, ChevronRight, Wallet, Smartphone, FileText } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { calculateLimit, getTransactionHistory } from '../services/api';
+
+// Helper: Lấy icon, label, color theo loại giao dịch
+const getTransactionMeta = (type: string) => {
+    switch (type) {
+        case 'TOPUP':
+            return {
+                label: 'Nạp tiền ĐT',
+                iconBg: 'bg-orange-100',
+                iconColor: '#F97316',
+                amountColor: 'text-orange-600',
+                Icon: Smartphone,
+            };
+        case 'BILL_PAYMENT':
+            return {
+                label: 'Thanh toán HĐ',
+                iconBg: 'bg-violet-100',
+                iconColor: '#7C3AED',
+                amountColor: 'text-violet-600',
+                Icon: FileText,
+            };
+        case 'WITHDRAWAL':
+        default:
+            return {
+                label: 'Rút tiền',
+                iconBg: 'bg-emerald-100',
+                iconColor: '#10B981',
+                amountColor: 'text-emerald-600',
+                Icon: DollarSign,
+            };
+    }
+};
 
 export default function HomeScreen() {
     const router = useRouter();
@@ -114,8 +145,8 @@ export default function HomeScreen() {
                     </View>
                 </View>
 
-                {/* Quick Actions */}
-                <View className="flex-row gap-4 mb-6">
+                {/* Quick Actions - Row 1 (3 items) */}
+                <View className="flex-row gap-4 mb-3">
                     <TouchableOpacity
                         className="flex-1 bg-white p-4 rounded-xl border border-slate-100 items-center"
                         onPress={() => router.push('/withdraw')}
@@ -126,6 +157,29 @@ export default function HomeScreen() {
                         <Text className="font-semibold text-slate-800 text-sm">Rút tiền</Text>
                     </TouchableOpacity>
 
+                    <TouchableOpacity
+                        className="flex-1 bg-white p-4 rounded-xl border border-slate-100 items-center"
+                        onPress={() => router.push('/topup')}
+                    >
+                        <View className="w-12 h-12 bg-orange-100 rounded-full items-center justify-center mb-2">
+                            <Smartphone color="#F97316" size={24} />
+                        </View>
+                        <Text className="font-semibold text-slate-800 text-sm">Nạp ĐT</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        className="flex-1 bg-white p-4 rounded-xl border border-slate-100 items-center"
+                        onPress={() => router.push('/bill-payment')}
+                    >
+                        <View className="w-12 h-12 bg-violet-100 rounded-full items-center justify-center mb-2">
+                            <FileText color="#7C3AED" size={24} />
+                        </View>
+                        <Text className="font-semibold text-slate-800 text-sm">Hóa đơn</Text>
+                    </TouchableOpacity>
+                </View>
+
+                {/* Quick Actions - Row 2 (2 items) */}
+                <View className="flex-row gap-4 mb-6">
                     <TouchableOpacity
                         className="flex-1 bg-white p-4 rounded-xl border border-slate-100 items-center"
                         onPress={() => router.push('/link-bank')}
@@ -145,6 +199,9 @@ export default function HomeScreen() {
                         </View>
                         <Text className="font-semibold text-slate-800 text-sm">Lịch sử</Text>
                     </TouchableOpacity>
+
+                    {/* Empty spacer to balance the row */}
+                    <View className="flex-1" />
                 </View>
 
                 {/* Bank Account Status */}
@@ -170,7 +227,7 @@ export default function HomeScreen() {
                     <ChevronRight color="#94A3B8" size={20} />
                 </TouchableOpacity>
 
-                {/* Recent Transactions */}
+                {/* Recent Transactions (Sprint 2: type-based rendering) */}
                 <View className="flex-row justify-between items-center mb-4">
                     <Text className="text-slate-800 font-bold text-lg">Giao dịch gần đây</Text>
                     <TouchableOpacity onPress={() => router.push('/history')}>
@@ -184,23 +241,29 @@ export default function HomeScreen() {
                         <Text className="text-slate-400 mt-2">Chưa có giao dịch nào</Text>
                     </View>
                 ) : (
-                    recentTransactions.map((txn) => (
-                        <View key={txn.id} className="bg-white p-4 rounded-xl border border-slate-100 mb-3 flex-row items-center justify-between">
-                            <View className="flex-row items-center gap-3">
-                                <View className="bg-emerald-100 p-2 rounded-full">
-                                    <DollarSign color="#10B981" size={20} />
+                    recentTransactions.map((txn) => {
+                        const meta = getTransactionMeta(txn.type);
+                        const TxnIcon = meta.Icon;
+                        return (
+                            <View key={txn.id} className="bg-white p-4 rounded-xl border border-slate-100 mb-3 flex-row items-center justify-between">
+                                <View className="flex-row items-center gap-3">
+                                    <View className={`${meta.iconBg} p-2 rounded-full`}>
+                                        <TxnIcon color={meta.iconColor} size={20} />
+                                    </View>
+                                    <View>
+                                        <Text className="text-slate-800 font-semibold">{meta.label}</Text>
+                                        <Text className="text-slate-400 text-xs">{formatDate(txn.createdAt)}</Text>
+                                    </View>
                                 </View>
-                                <View>
-                                    <Text className="text-slate-800 font-semibold">Rút tiền</Text>
-                                    <Text className="text-slate-400 text-xs">{formatDate(txn.createdAt)}</Text>
+                                <View className="items-end">
+                                    <Text className={`${meta.amountColor} font-bold`}>-{formatCurrency(txn.amount)}</Text>
+                                    <Text className="text-slate-400 text-xs">
+                                        {txn.fee > 0 ? `Phí: ${formatCurrency(txn.fee)}` : 'Miễn phí'}
+                                    </Text>
                                 </View>
                             </View>
-                            <View className="items-end">
-                                <Text className="text-emerald-600 font-bold">-{formatCurrency(txn.amount)}</Text>
-                                <Text className="text-slate-400 text-xs">Phí: {formatCurrency(txn.fee)}</Text>
-                            </View>
-                        </View>
-                    ))
+                        );
+                    })
                 )}
 
             </ScrollView>
