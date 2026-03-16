@@ -51,6 +51,8 @@ function RootLayoutNav() {
             <Stack.Screen name="link-bank" />
             <Stack.Screen name="history" />
             <Stack.Screen name="success" />
+            <Stack.Screen name="topup" />
+            <Stack.Screen name="bill-payment" />
         </Stack>
     );
 }
