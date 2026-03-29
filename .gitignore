@@ -1,0 +1,22 @@
+# Node modules
+node_modules/
+.expo/
+dist/
+
+# Local env files
+.env
+.env.local
+
+# Tooling and IDE
+.project
+.vscode/
+
+# AI Tooling (Claude, Gemini, GitNexus)
+.claude/
+.gemini/
+.gitnexus/
+.git/
+
+# OS specific files
+.DS_Store
+Thumbs.db
