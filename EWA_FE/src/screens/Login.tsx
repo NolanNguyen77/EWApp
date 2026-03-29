@@ -1,11 +1,22 @@
-import { useState, useRef } from 'react';
-import { Wallet, ArrowRight, ShieldCheck, KeyRound, Lock } from 'lucide-react';
-import { useApp } from '../AppContext';
-import * as mockApi from '@/services/mockApi';
+import React, { useState, useRef } from 'react';
+import {
+  View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator,
+  KeyboardAvoidingView, Platform, ScrollView,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Feather, MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { useApp } from '../context/AppContext';
+import * as mockApi from '../services/mockApi';
+import { colors, shadows } from '../theme/colors';
+import { RootStackParamList } from '../types';
+
+type LoginNavigationProp = StackNavigationProp<RootStackParamList, 'Login'>;
 
 type LoginStep = 'employee' | 'otp';
 
-export default function Login({ onLogin }: { onLogin: () => void }) {
+export default function LoginScreen({ navigation }: { navigation: LoginNavigationProp }) {
   const { login } = useApp();
   const [step, setStep] = useState<LoginStep>('employee');
   const [employeeCode, setEmployeeCode] = useState('');
@@ -13,7 +24,7 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [employeeData, setEmployeeData] = useState<any>(null);
-  const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const otpRefs = useRef<(TextInput | null)[]>([]);
 
   const handleValidateEmployee = async () => {
     if (!employeeCode.trim()) { setError('Vui lòng nhập mã nhân viên'); return; }
@@ -24,37 +35,26 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
     if (result.success) {
       setEmployeeData(result.data);
       setStep('otp');
-      setError('');
-      setTimeout(() => otpRefs.current[0]?.focus(), 100);
+      setTimeout(() => otpRefs.current[0]?.focus(), 150);
     } else {
       setError(result.error || 'Mã nhân viên không tồn tại');
     }
   };
 
   const handleOtpChange = (index: number, value: string) => {
-    if (!/^\d*$/.test(value)) return;
+    const digit = value.replace(/\D/g, '').slice(-1);
     const newDigits = [...otpDigits];
-    newDigits[index] = value.slice(-1);
+    newDigits[index] = digit;
     setOtpDigits(newDigits);
     setError('');
-    if (value && index < 5) otpRefs.current[index + 1]?.focus();
+    if (digit && index < 5) otpRefs.current[index + 1]?.focus();
     const fullOtp = newDigits.join('');
-    if (fullOtp.length === 6) handleVerifyOtp(fullOtp);
+    if (fullOtp.length === 6 && !newDigits.includes('')) handleVerifyOtp(fullOtp);
   };
 
-  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent) => {
-    if (e.key === 'Backspace' && !otpDigits[index] && index > 0) otpRefs.current[index - 1]?.focus();
-  };
-
-  const handleOtpPaste = (e: React.ClipboardEvent) => {
-    e.preventDefault();
-    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
-    if (pasted.length > 0) {
-      const newDigits = [...otpDigits];
-      for (let i = 0; i < 6; i++) newDigits[i] = pasted[i] || '';
-      setOtpDigits(newDigits);
-      if (pasted.length === 6) handleVerifyOtp(pasted);
-      else otpRefs.current[pasted.length]?.focus();
+  const handleOtpKeyPress = (index: number, key: string) => {
+    if (key === 'Backspace' && !otpDigits[index] && index > 0) {
+      otpRefs.current[index - 1]?.focus();
     }
   };
 
@@ -63,178 +63,243 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
     setError('');
     const result = await mockApi.verifyOtp(otp);
     setLoading(false);
-    if (result.success) { login(employeeData); onLogin(); }
-    else { setError(result.error || 'Mã OTP không đúng'); setOtpDigits(['', '', '', '', '', '']); setTimeout(() => otpRefs.current[0]?.focus(), 100); }
+    if (result.success) {
+      login(employeeData);
+    } else {
+      setError(result.error || 'Mã OTP không đúng');
+      setOtpDigits(['', '', '', '', '', '']);
+      setTimeout(() => otpRefs.current[0]?.focus(), 100);
+    }
   };
 
-  // ===== OTP SCREEN =====
+  const maskedPhone = employeeData?.phone
+    ? employeeData.phone.replace(/(\d{3})\d{4}(\d{3})/, '$1****$2')
+    : '***';
+
   if (step === 'otp') {
-    const maskedPhone = employeeData?.phone
-      ? employeeData.phone.replace(/(\d{3})\d{4}(\d{3})/, '$1****$2')
-      : '***';
-
     return (
-      <div className="flex-1 flex flex-col min-h-screen relative overflow-hidden">
-        {/* Background */}
-        <div className="absolute inset-0 bg-gradient-to-b from-indigo-50 via-white to-purple-50/40"></div>
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-gradient-to-b from-indigo-100/60 to-transparent rounded-full blur-3xl"></div>
+      <SafeAreaView style={styles.safeArea}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+          <LinearGradient colors={['#f8fafc', '#ffffff']} style={styles.background} />
+          <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
 
-        <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-8 py-12">
-          {/* Icon */}
-          <div className="relative mb-8">
-            <div className="w-20 h-20 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center shadow-[0_12px_40px_rgba(99,102,241,0.3)]">
-              <Lock className="w-10 h-10 text-white" />
-            </div>
-            <div className="absolute -bottom-1 -right-1 w-7 h-7 bg-emerald-400 rounded-full flex items-center justify-center border-[3px] border-white">
-              <ShieldCheck className="w-3.5 h-3.5 text-white" />
-            </div>
-          </div>
+            <View style={styles.iconWrapper}>
+              <LinearGradient colors={['#6366f1', '#4f46e5']} style={styles.iconGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+                <Ionicons name="lock-closed" size={36} color="#fff" />
+              </LinearGradient>
+            </View>
 
-          {/* Title */}
-          <h1 className="text-3xl font-black text-slate-900 text-center mb-2">Xác thực OTP</h1>
-          <p className="text-slate-500 text-sm text-center leading-relaxed max-w-[280px] mb-10">
-            Mã xác thực đã được gửi đến<br/>số điện thoại <span className="font-bold text-slate-700">{maskedPhone}</span>
-          </p>
+            <Text style={styles.heading}>Xác thực OTP</Text>
+            <Text style={styles.subheading}>
+              Mã xác thực đã được gửi đến{'\n'}số điện thoại <Text style={styles.phoneHighlight}>{maskedPhone}</Text>
+            </Text>
 
-          {/* OTP Boxes */}
-          <div className="flex justify-center gap-3 mb-4" onPaste={handleOtpPaste}>
-            {otpDigits.map((digit, i) => (
-              <input
-                key={i}
-                ref={el => { otpRefs.current[i] = el; }}
-                type="text"
-                inputMode="numeric"
-                maxLength={1}
-                value={digit}
-                onChange={(e) => handleOtpChange(i, e.target.value)}
-                onKeyDown={(e) => handleOtpKeyDown(i, e)}
-                className={`w-[48px] h-[56px] text-center text-2xl font-bold rounded-2xl transition-all duration-200 outline-none ${
-                  digit
-                    ? 'bg-indigo-50 border-2 border-indigo-500 text-indigo-700 shadow-[0_4px_12px_rgba(99,102,241,0.15)]'
-                    : 'bg-white border-2 border-slate-200 text-slate-900 focus:border-indigo-400 focus:shadow-[0_4px_12px_rgba(99,102,241,0.1)]'
-                }`}
-              />
-            ))}
-          </div>
+            <View style={styles.otpRow}>
+              {otpDigits.map((digit, i) => (
+                <TextInput
+                  key={i}
+                  ref={el => { otpRefs.current[i] = el; }}
+                  style={[styles.otpBox, digit ? styles.otpBoxFilled : {}]}
+                  value={digit}
+                  onChangeText={val => handleOtpChange(i, val)}
+                  onKeyPress={({ nativeEvent }) => handleOtpKeyPress(i, nativeEvent.key)}
+                  keyboardType="number-pad"
+                  maxLength={1}
+                  textAlign="center"
+                  selectTextOnFocus
+                />
+              ))}
+            </View>
 
-          {/* Resend / Change */}
-          <div className="flex items-center gap-4 mb-8">
-            <button onClick={() => { setStep('employee'); setOtpDigits(['', '', '', '', '', '']); setError(''); }}
-              className="text-indigo-600 text-xs font-semibold hover:underline">
-              Đổi mã nhân viên
-            </button>
-            <span className="text-slate-300">|</span>
-            <button className="text-indigo-600 text-xs font-semibold hover:underline">Gửi lại mã</button>
-          </div>
+            <View style={styles.otpLinks}>
+              <TouchableOpacity onPress={() => { setStep('employee'); setOtpDigits(['','','','','','']); setError(''); }}>
+                <Text style={styles.linkText}>Đổi mã nhân viên</Text>
+              </TouchableOpacity>
+              <Text style={styles.dot}>|</Text>
+              <TouchableOpacity><Text style={styles.linkText}>Gửi lại mã</Text></TouchableOpacity>
+            </View>
 
-          {/* Error */}
-          {error && (
-            <div className="w-full max-w-xs bg-red-50 text-red-600 text-sm font-medium px-4 py-3 rounded-2xl border border-red-100 text-center mb-6">{error}</div>
-          )}
+            {error ? <View style={styles.errorBox}><Text style={styles.errorText}>{error}</Text></View> : null}
 
-          {/* Submit Button */}
-          <button
-            onClick={() => handleVerifyOtp(otpDigits.join(''))}
-            disabled={loading || otpDigits.join('').length < 6}
-            className="w-full max-w-xs bg-gradient-to-r from-indigo-600 via-indigo-600 to-purple-600 text-white font-bold py-4 rounded-full shadow-[0_8px_32px_rgba(99,102,241,0.35)] active:scale-[0.97] transition-all disabled:opacity-50 flex items-center justify-center gap-2 text-base"
-          >
-            {loading ? (
-              <span className="flex items-center gap-2">
-                <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
-                Đang xác thực...
-              </span>
-            ) : <>Xác nhận<ArrowRight className="w-5 h-5" /></>}
-          </button>
-        </div>
+            <TouchableOpacity
+              onPress={() => handleVerifyOtp(otpDigits.join(''))}
+              disabled={loading || otpDigits.join('').length < 6}
+              style={[styles.submitBtnWrapper, (loading || otpDigits.join('').length < 6) && { opacity: 0.5 }]}
+              activeOpacity={0.85}
+            >
+              <LinearGradient colors={['#5c5adb', '#4338ca']} style={styles.submitBtn} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
+                {loading
+                  ? <ActivityIndicator color="#fff" size="small" />
+                  : <><Text style={styles.submitText}>Xác nhận</Text><Ionicons name="arrow-forward" size={18} color="#fff" /></>}
+              </LinearGradient>
+            </TouchableOpacity>
 
-        {/* Footer */}
-        <div className="relative z-10 pb-8 flex items-center justify-center gap-2">
-          <span className="text-[11px] font-bold text-slate-400 tracking-widest">EWA</span>
-          <span className="text-slate-300">•</span>
-          <span className="text-[10px] font-medium text-slate-400 tracking-wider">SECURED BY LUMINA</span>
-        </div>
-      </div>
+            <View style={styles.footer}>
+              <Text style={styles.footerText}>BẢO MẬT BỞI EWA</Text>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
     );
   }
 
-  // ===== LOGIN SCREEN =====
   return (
-    <div className="flex-1 flex flex-col min-h-screen relative overflow-hidden">
-      {/* Background */}
-      <div className="absolute inset-0 bg-gradient-to-b from-indigo-50 via-white to-purple-50/40"></div>
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-gradient-to-b from-indigo-100/60 to-transparent rounded-full blur-3xl"></div>
+    <SafeAreaView style={styles.safeArea}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+        <LinearGradient colors={['#f8fafc', '#ffffff']} style={styles.background} />
+        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
 
-      <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-8 py-12">
-        {/* Logo */}
-        <div className="mb-10 flex flex-col items-center">
-          <div className="w-20 h-20 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-[0_12px_40px_rgba(99,102,241,0.3)] mb-5">
-            <Wallet className="text-white w-10 h-10" />
-          </div>
-          <h1 className="text-4xl font-black tracking-tight text-indigo-700">EWA</h1>
-          <p className="text-slate-400 font-medium mt-1 text-sm tracking-wide">Enterprise Wallet Access</p>
-        </div>
+          {/* Logo Section */}
+          <View style={styles.logoSection}>
+            <LinearGradient colors={['#6366f1', '#4f46e5']} style={styles.logoBox} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+              <MaterialCommunityIcons name="wallet" size={40} color="#fff" />
+            </LinearGradient>
+            <Text style={styles.logoTitle}>EWA</Text>
+            <Text style={styles.logoSubtitle}>Enterprise Solutions</Text>
+          </View>
 
-        {/* Title */}
-        <div className="text-center mb-10">
-          <h2 className="text-2xl font-black text-slate-900 mb-2">Chào mừng trở lại!</h2>
-          <p className="text-slate-500 text-sm leading-relaxed max-w-[260px] mx-auto">
-            Nhập mã nhân viên để truy cập<br/>quyền lợi ứng lương của bạn
-          </p>
-        </div>
+          <Text style={styles.heading}>Chào mừng trở lại</Text>
+          <Text style={styles.subheading}>
+            Vui lòng nhập mã nhân viên để tiếp tục truy cập{'\n'}quyền lợi của bạn.
+          </Text>
 
-        {/* Input */}
-        <div className="w-full max-w-xs space-y-3 mb-8">
-          <label className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400 px-1">Mã nhân viên</label>
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="VD: NV001"
-              value={employeeCode}
-              onChange={(e) => { setEmployeeCode(e.target.value.toUpperCase()); setError(''); }}
-              onKeyDown={(e) => e.key === 'Enter' && handleValidateEmployee()}
-              autoFocus
-              className="w-full px-5 py-4 bg-white border-2 border-slate-200 rounded-2xl focus:border-indigo-400 focus:shadow-[0_4px_16px_rgba(99,102,241,0.1)] transition-all text-slate-900 text-lg font-bold placeholder:text-slate-300 placeholder:font-medium outline-none"
-            />
-          </div>
-        </div>
+          {/* Input Section */}
+          <View style={styles.inputSection}>
+            <Text style={styles.inputLabel}>MÃ NHÂN VIÊN</Text>
+            <View style={styles.inputWrapper}>
+              <MaterialCommunityIcons name="card-account-details-outline" size={24} color={colors.slate400} />
+              <TextInput
+                style={styles.textInput}
+                placeholder="VD: NV001"
+                placeholderTextColor={colors.slate300}
+                value={employeeCode}
+                onChangeText={val => { setEmployeeCode(val.toUpperCase()); setError(''); }}
+                onSubmitEditing={handleValidateEmployee}
+                autoCapitalize="characters"
+                autoCorrect={false}
+                returnKeyType="go"
+              />
+            </View>
+          </View>
 
-        {/* Error */}
-        {error && (
-          <div className="w-full max-w-xs bg-red-50 text-red-600 text-sm font-medium px-4 py-3 rounded-2xl border border-red-100 text-center mb-6">{error}</div>
-        )}
+          {error ? <View style={styles.errorBox}><Text style={styles.errorText}>{error}</Text></View> : null}
 
-        {/* Submit Button */}
-        <button
-          onClick={handleValidateEmployee}
-          disabled={loading}
-          className="w-full max-w-xs bg-gradient-to-r from-indigo-600 via-indigo-600 to-purple-600 text-white font-bold py-4 rounded-full shadow-[0_8px_32px_rgba(99,102,241,0.35)] active:scale-[0.97] transition-all disabled:opacity-50 flex items-center justify-center gap-2 text-base"
-        >
-          {loading ? (
-            <span className="flex items-center gap-2">
-              <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
-              Đang xử lý...
-            </span>
-          ) : <>Tiếp tục<ArrowRight className="w-5 h-5" /></>}
-        </button>
+          {/* Button */}
+          <TouchableOpacity
+            onPress={handleValidateEmployee}
+            disabled={loading}
+            style={[styles.submitBtnWrapper, loading && { opacity: 0.5 }]}
+            activeOpacity={0.85}
+          >
+            <LinearGradient colors={['#5c5adb', '#4338ca']} style={styles.submitBtn} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
+              {loading
+                ? <ActivityIndicator color="#fff" size="small" />
+                : <><Text style={styles.submitText}>Tiếp tục</Text><Ionicons name="arrow-forward" size={18} color="#fff" /></>}
+            </LinearGradient>
+          </TouchableOpacity>
 
-        {/* Info card */}
-        <div className="mt-10 w-full max-w-xs bg-white/60 backdrop-blur-sm p-4 rounded-2xl flex items-start gap-3 border border-slate-100/80">
-          <div className="w-9 h-9 bg-indigo-50 rounded-xl flex items-center justify-center shrink-0">
-            <ShieldCheck className="w-5 h-5 text-indigo-600" />
-          </div>
-          <div>
-            <h3 className="text-xs font-bold text-slate-800">Truy cập tức thì</h3>
-            <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">Nhận lương sớm mà không cần thủ tục rườm rà.</p>
-          </div>
-        </div>
-      </div>
+          {/* Divider */}
+          <View style={styles.dividerRow}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>BẢO MẬT BỞI EWA</Text>
+            <View style={styles.dividerLine} />
+          </View>
 
-      {/* Footer */}
-      <div className="relative z-10 pb-8 flex items-center justify-center gap-2">
-        <span className="text-[11px] font-bold text-slate-400 tracking-widest">EWA</span>
-        <span className="text-slate-300">•</span>
-        <span className="text-[10px] font-medium text-slate-400 tracking-wider">SECURED BY LUMINA</span>
-      </div>
-    </div>
+          {/* Feature Card */}
+          <View style={styles.featureCard}>
+            <View style={styles.shieldIconBox}>
+              <Ionicons name="shield-checkmark" size={20} color={colors.indigo600} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.featureTitle}>Truy cập tức thì</Text>
+              <Text style={styles.featureDesc}>Nhận lương sớm bất cứ khi nào bạn cần mà không cần thủ tục rườm rà.</Text>
+            </View>
+          </View>
+
+          {/* Footer Links */}
+          <View style={styles.footerLinks}>
+            <TouchableOpacity><Text style={styles.footerLinkText}>Hỗ trợ khách hàng</Text></TouchableOpacity>
+            <TouchableOpacity><Text style={styles.footerLinkText}>Điều khoản sử dụng</Text></TouchableOpacity>
+            <TouchableOpacity><Text style={styles.footerLinkText}>Bảo mật</Text></TouchableOpacity>
+          </View>
+
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  safeArea: { flex: 1, backgroundColor: '#f8fafc' },
+  background: { ...StyleSheet.absoluteFillObject },
+  content: {
+    alignItems: 'center',
+    paddingHorizontal: 28,
+    paddingTop: 40,
+    paddingBottom: 40,
+  },
+  logoSection: { alignItems: 'center', marginBottom: 40 },
+  logoBox: {
+    width: 90, height: 90, borderRadius: 45,
+    alignItems: 'center', justifyContent: 'center',
+    marginBottom: 16, 
+    ...shadows.primary,
+  },
+  logoTitle: { fontSize: 44, fontWeight: '900', color: '#4338ca', letterSpacing: -1 },
+  logoSubtitle: { fontSize: 16, color: colors.slate500, fontWeight: '600', marginTop: 4 },
+
+  heading: { fontSize: 32, fontWeight: '900', color: colors.slate900, textAlign: 'center', marginBottom: 16 },
+  subheading: { fontSize: 15, color: colors.slate500, textAlign: 'center', lineHeight: 24, marginBottom: 40 },
+  
+  inputSection: { width: '100%', marginBottom: 12 },
+  inputLabel: { fontSize: 11, fontWeight: '800', color: colors.slate500, letterSpacing: 1.2, marginBottom: 10, paddingLeft: 4 },
+  inputWrapper: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: '#eceef0', borderRadius: 40,
+    paddingHorizontal: 20, paddingVertical: 4,
+  },
+  textInput: {
+    flex: 1, height: 56, fontSize: 18, fontWeight: '700',
+    color: colors.slate900, marginLeft: 12,
+  },
+
+  submitBtnWrapper: { 
+    width: '100%', borderRadius: 100, overflow: 'hidden', 
+    marginTop: 20, marginBottom: 40, 
+    ...shadows.primary,
+    borderWidth: 2, borderColor: 'rgba(99,102,241,0.2)',
+  },
+  submitBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, paddingVertical: 18 },
+  submitText: { color: colors.white, fontSize: 17, fontWeight: '800' },
+
+  dividerRow: { flexDirection: 'row', alignItems: 'center', width: '100%', gap: 12, marginBottom: 40 },
+  dividerLine: { flex: 1, height: 1, backgroundColor: '#f1f5f9' },
+  dividerText: { fontSize: 11, fontWeight: '800', color: colors.slate400, letterSpacing: 1.5 },
+
+  featureCard: {
+    width: '100%', backgroundColor: '#eceef0', borderRadius: 40,
+    padding: 24, flexDirection: 'row', alignItems: 'center', gap: 16,
+    marginBottom: 40,
+  },
+  shieldIconBox: { width: 44, height: 44, backgroundColor: colors.white, borderRadius: 22, alignItems: 'center', justifyContent: 'center', ...shadows.sm },
+  featureTitle: { fontSize: 15, fontWeight: '800', color: colors.slate900, marginBottom: 4 },
+  featureDesc: { fontSize: 13, color: colors.slate500, lineHeight: 20, fontWeight: '500' },
+
+  footerLinks: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 20, marginTop: 20 },
+  footerLinkText: { fontSize: 13, fontWeight: '700', color: colors.slate900 },
+
+  // OTP Styles (maintained but subtly updated colors)
+  iconWrapper: { marginBottom: 32 },
+  iconGradient: { width: 80, height: 80, borderRadius: 40, alignItems: 'center', justifyContent: 'center' },
+  phoneHighlight: { fontWeight: '700', color: colors.slate700 },
+  otpRow: { flexDirection: 'row', gap: 10, marginBottom: 20 },
+  otpBox: { width: 46, height: 56, borderWidth: 2, borderColor: colors.slate200, borderRadius: 14, fontSize: 22, fontWeight: '700', color: colors.slate900, backgroundColor: colors.white },
+  otpBoxFilled: { borderColor: colors.indigo600, backgroundColor: colors.indigo50, color: colors.indigo700 },
+  otpLinks: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 24 },
+  dot: { color: colors.slate300, fontSize: 14 },
+  linkText: { color: colors.indigo600, fontSize: 12, fontWeight: '700' },
+  errorBox: { width: '100%', backgroundColor: colors.red50, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: '#fecaca', marginBottom: 20, alignItems: 'center' },
+  errorText: { color: colors.red600, fontSize: 14, fontWeight: '500' },
+  footer: { alignItems: 'center', marginTop: 20 },
+  footerText: { fontSize: 11, color: colors.slate400, fontWeight: '800', letterSpacing: 1.5 },
+});

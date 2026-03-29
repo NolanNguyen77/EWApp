@@ -1,105 +1,148 @@
-import { CheckCircle2, ArrowRight, Wallet } from 'lucide-react';
+import React from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useNavigation } from '@react-navigation/native';
+import { colors, shadows } from '../theme/colors';
 
 interface SuccessScreenProps {
   title: string;
   subtitle?: string;
-  /** The main highlighted amount label (e.g. "SỐ TIỀN NHẬN THỰC TẾ") */
   amountLabel?: string;
-  /** The main highlighted amount value (e.g. "1,980,000 đ") */
   amount?: string;
-  /** Breakdown items shown inside the card below the amount */
   breakdown?: { label: string; value: string }[];
-  /** Metadata items shown below the card (transaction ID, time, method) */
   meta?: { label: string; value: string }[];
   primaryAction: { label: string; onClick: () => void };
   secondaryAction?: { label: string; onClick: () => void };
 }
 
-export default function SuccessScreen({ title, subtitle, amountLabel, amount, breakdown, meta, primaryAction, secondaryAction }: SuccessScreenProps) {
+export default function SuccessScreen({
+  title, subtitle, amountLabel, amount, breakdown, meta, primaryAction, secondaryAction,
+}: SuccessScreenProps) {
+  const navigation = useNavigation();
+
   return (
-    <div className="flex-1 flex flex-col items-center relative overflow-hidden">
-      {/* Background gradient */}
-      <div className="absolute inset-0 bg-gradient-to-b from-indigo-50 via-white to-purple-50/40 pointer-events-none"></div>
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[250px] bg-gradient-to-b from-indigo-100/60 to-transparent rounded-full blur-3xl pointer-events-none"></div>
-      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[500px] h-[200px] bg-gradient-to-t from-purple-100/40 to-transparent rounded-full blur-3xl pointer-events-none"></div>
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+          <Ionicons name="close" size={24} color={colors.slate900} />
+        </TouchableOpacity>
+      </View>
 
-      <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-8 py-10 w-full max-w-sm mx-auto">
-        {/* Success Icon */}
-        <div className="relative mb-6">
-          <div className="w-20 h-20 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center shadow-[0_12px_40px_rgba(99,102,241,0.3)]">
-            <CheckCircle2 className="w-10 h-10 text-white" strokeWidth={2.5} />
-          </div>
-          <div className="absolute -bottom-1 -right-1 w-7 h-7 bg-emerald-400 rounded-full flex items-center justify-center border-[3px] border-white shadow-sm">
-            <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-          </div>
-        </div>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Success Icon Visualization */}
+        <View style={styles.iconContainer}>
+          <LinearGradient
+            colors={['#6366f1', '#4338ca']}
+            style={styles.mainCircle}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          >
+            <Ionicons name="checkmark" size={48} color="#fff" />
+          </LinearGradient>
+          
+          {/* Decorative floating dots */}
+          <View style={[styles.dot, styles.dot1]} />
+          <View style={[styles.dot, styles.dot2]} />
+          <View style={[styles.dot, styles.dot3]} />
+        </View>
 
-        {/* Title */}
-        <h1 className="text-[28px] font-black text-slate-900 text-center leading-tight mb-2">{title}</h1>
-        {subtitle && <p className="text-slate-500 text-sm text-center mb-8 max-w-[250px]">{subtitle}</p>}
+        <Text style={styles.title}>{title}</Text>
+        {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
 
-        {/* Amount Card */}
+        {/* Amount prominently */}
         {amount && (
-          <div className="w-full bg-white rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.06)] border border-slate-100/80 overflow-hidden mb-6">
-            {/* Main amount */}
-            <div className="px-6 pt-6 pb-4 text-center">
-              {amountLabel && (
-                <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400 mb-2">{amountLabel}</p>
-              )}
-              <p className="text-[34px] font-black text-indigo-600 tracking-tight leading-none">{amount}</p>
-            </div>
-
-            {/* Breakdown */}
-            {breakdown && breakdown.length > 0 && (
-              <div className="px-6 pb-5 space-y-0">
-                {breakdown.map((item, i) => (
-                  <div key={i} className="flex justify-between items-center py-2.5 border-t border-dashed border-slate-100 first:border-t-0">
-                    <span className="text-sm text-slate-500">{item.label}</span>
-                    <span className="text-sm font-bold text-slate-700">{item.value}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          <View style={styles.amountBox}>
+            <Text style={styles.amountText}>{amount}</Text>
+            <View style={styles.statusBadge}>
+              <View style={styles.statusDot} />
+              <Text style={styles.statusText}>Hoàn thành</Text>
+            </View>
+          </View>
         )}
 
-        {/* Meta info */}
-        {meta && meta.length > 0 && (
-          <div className="w-full space-y-3 mb-8">
-            {meta.map((item, i) => (
-              <div key={i} className="flex justify-between items-center px-1">
-                <span className="text-xs text-slate-400 font-medium">{item.label}</span>
-                <span className="text-xs font-bold text-slate-600">{item.value}</span>
-              </div>
+        {/* Details Card */}
+        <View style={styles.detailsCard}>
+          <View style={styles.detailsList}>
+            {(breakdown || meta || []).map((item, i) => (
+              <View key={i} style={[styles.detailRow, i === 0 && { borderTopWidth: 0 }]}>
+                <Text style={styles.detailLabel}>{item.label}</Text>
+                <View style={styles.detailValueBox}>
+                  {item.label.toLowerCase().includes('ngân hàng') && (
+                    <MaterialCommunityIcons name="bank" size={14} color={colors.indigo600} style={{ marginRight: 6 }} />
+                  )}
+                  <Text style={styles.detailValue}>{item.value}</Text>
+                </View>
+              </View>
             ))}
-          </div>
-        )}
+          </View>
+        </View>
 
         {/* Actions */}
-        <div className="w-full space-y-3 mt-auto">
-          <button
-            onClick={primaryAction.onClick}
-            className="w-full bg-gradient-to-r from-indigo-600 via-indigo-600 to-purple-600 text-white font-bold py-4 rounded-full shadow-[0_8px_32px_rgba(99,102,241,0.35)] active:scale-[0.97] transition-all flex items-center justify-center gap-2 text-base"
+        <View style={styles.actions}>
+          <TouchableOpacity 
+            onPress={primaryAction.onClick} 
+            style={styles.primaryBtn} 
+            activeOpacity={0.9}
           >
-            {primaryAction.label}
-          </button>
-          {secondaryAction && (
-            <button
-              onClick={secondaryAction.onClick}
-              className="w-full bg-white text-indigo-600 font-bold py-3.5 rounded-full border-2 border-indigo-100 hover:border-indigo-200 hover:bg-indigo-50/30 transition-all text-sm"
-            >
-              {secondaryAction.label}
-            </button>
-          )}
-        </div>
-      </div>
+            <Text style={styles.primaryBtnText}>{primaryAction.label}</Text>
+          </TouchableOpacity>
 
-      {/* Footer */}
-      <div className="relative z-10 pb-8 flex items-center justify-center gap-2">
-        <span className="text-[11px] font-bold text-slate-400 tracking-widest">EWA</span>
-        <span className="text-slate-300">•</span>
-        <span className="text-[10px] font-medium text-slate-400 tracking-wider">SECURED BY LUMINA</span>
-      </div>
-    </div>
+          {secondaryAction && (
+            <TouchableOpacity 
+              onPress={secondaryAction.onClick} 
+              style={styles.secondaryBtn} 
+              activeOpacity={0.7}
+            >
+              <Text style={styles.secondaryBtnText}>{secondaryAction.label}</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>Xác nhận bởi EWApp • 2026</Text>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#f8fafc' },
+  header: { paddingHorizontal: 20, paddingTop: 10 },
+  backBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', ...shadows.sm },
+  content: { alignItems: 'center', paddingHorizontal: 24, paddingBottom: 60 },
+  
+  iconContainer: { position: 'relative', marginTop: 20, marginBottom: 32 },
+  mainCircle: { width: 100, height: 100, borderRadius: 50, alignItems: 'center', justifyContent: 'center', ...shadows.primary },
+  dot: { position: 'absolute', width: 10, height: 10, borderRadius: 5 },
+  dot1: { top: 0, right: -10, backgroundColor: '#cbd5e1' },
+  dot2: { bottom: 20, left: -20, backgroundColor: '#6366f1', opacity: 0.4 },
+  dot3: { bottom: 10, right: -20, backgroundColor: '#4f46e5' },
+
+  title: { fontSize: 28, fontWeight: '900', color: colors.slate900, textAlign: 'center' },
+  subtitle: { fontSize: 14, color: colors.slate500, textAlign: 'center', marginTop: 8, lineHeight: 22, maxWidth: '80%' },
+  
+  amountBox: { alignItems: 'center', marginTop: 32, marginBottom: 40 },
+  amountText: { fontSize: 44, fontWeight: '900', color: '#4338ca', letterSpacing: -1 },
+  statusBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#f0fdf4', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, marginTop: 12 },
+  statusDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#10b981', marginRight: 8 },
+  statusText: { color: '#10b981', fontSize: 12, fontWeight: '800', textTransform: 'uppercase' },
+  
+  detailsCard: { width: '100%', backgroundColor: '#fff', borderRadius: 32, padding: 24, ...shadows.sm },
+  detailsList: { gap: 16 },
+  detailRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 4 },
+  detailLabel: { fontSize: 13, color: colors.slate400, fontWeight: '600' },
+  detailValueBox: { flexDirection: 'row', alignItems: 'center' },
+  detailValue: { fontSize: 14, color: colors.slate900, fontWeight: '700' },
+  
+  actions: { width: '100%', gap: 16, marginTop: 40 },
+  primaryBtn: { backgroundColor: '#4338ca', paddingVertical: 18, borderRadius: 24, alignItems: 'center', ...shadows.md },
+  primaryBtnText: { color: '#fff', fontSize: 16, fontWeight: '800' },
+  secondaryBtn: { paddingVertical: 16, borderRadius: 24, alignItems: 'center', borderWidth: 1, borderColor: '#e2e8f0' },
+  secondaryBtnText: { color: colors.slate600, fontSize: 14, fontWeight: '700' },
+  
+  footer: { marginTop: 40 },
+  footerText: { fontSize: 11, color: colors.slate400, fontWeight: '500', letterSpacing: 0.5 },
+});

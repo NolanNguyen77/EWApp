@@ -1,9 +1,17 @@
-import { useState, useEffect, useMemo } from 'react';
-import { Wallet, Smartphone, Receipt, Gift } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import {
+  View, Text, TouchableOpacity, StyleSheet, SectionList,
+  ActivityIndicator, Image, ScrollView,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useNavigation } from '@react-navigation/native';
+import { useApp } from '../context/AppContext';
+import * as mockApi from '../services/mockApi';
+import { Transaction } from '../types';
 import TopBar from '../components/TopBar';
-import { Screen, Transaction } from '../types';
-import { useApp } from '../AppContext';
-import * as mockApi from '@/services/mockApi';
+import { colors, shadows } from '../theme/colors';
 
 type FilterType = 'ALL' | 'WITHDRAWAL' | 'TOPUP' | 'BILL_PAYMENT';
 
@@ -16,28 +24,28 @@ const FILTER_TABS: { key: FilterType; label: string }[] = [
 
 const getTransactionIcon = (type: string) => {
   switch (type) {
-    case 'WITHDRAWAL': return { Icon: Wallet, bg: 'bg-emerald-50', color: 'text-emerald-600' };
-    case 'TOPUP': return { Icon: Smartphone, bg: 'bg-orange-50', color: 'text-orange-500' };
-    case 'BILL_PAYMENT': return { Icon: Receipt, bg: 'bg-purple-50', color: 'text-purple-600' };
-    default: return { Icon: Wallet, bg: 'bg-slate-50', color: 'text-slate-500' };
+    case 'WITHDRAWAL': return { name: 'wallet', bg: '#ecfdf5', color: '#059669' };
+    case 'TOPUP': return { name: 'smartphone', bg: '#fff7ed', color: '#f59e0b' };
+    case 'BILL_PAYMENT': return { name: 'file-text', bg: '#f5f3ff', color: '#7c3aed' };
+    default: return { name: 'credit-card', bg: '#f8fafc', color: '#64748b' };
   }
 };
 
 const getTransactionLabel = (txn: Transaction) => {
   switch (txn.type) {
-    case 'WITHDRAWAL': return `Rút tiền • ${txn.bankName || ''}`;
-    case 'TOPUP': return `Nạp ĐT • ${txn.phoneNumber || ''}`;
-    case 'BILL_PAYMENT': return `${txn.serviceType === 'ELECTRIC' ? 'Tiền điện' : 'Tiền nước'} • ${txn.provider || ''}`;
+    case 'WITHDRAWAL': return `Rút tiền về tài khoản`;
+    case 'TOPUP': return `Nạp tiền điện thoại`;
+    case 'BILL_PAYMENT': return `Thanh toán tiền điện`;
     default: return 'Giao dịch';
   }
 };
 
 const getStatusBadge = (status: string) => {
   switch (status) {
-    case 'SUCCESS': return { bg: 'bg-emerald-50', color: 'text-emerald-600', label: 'SUCCESS' };
-    case 'PENDING': return { bg: 'bg-amber-50', color: 'text-amber-600', label: 'PENDING' };
-    case 'FAILED': return { bg: 'bg-red-50', color: 'text-red-600', label: 'FAILED' };
-    default: return { bg: 'bg-slate-50', color: 'text-slate-500', label: status };
+    case 'SUCCESS': return { bg: '#ecfdf5', color: '#059669', label: 'SUCCESS' };
+    case 'PENDING': return { bg: '#fffbeb', color: '#d97706', label: 'PENDING' };
+    case 'FAILED': return { bg: '#fef2f2', color: '#dc2626', label: 'FAILED' };
+    default: return { bg: '#f8fafc', color: '#64748b', label: status };
   }
 };
 
@@ -57,19 +65,8 @@ const formatDate = (isoStr: string) => {
   return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()}`;
 };
 
-const groupByDate = (txns: Transaction[]) => {
-  const groups: { [key: string]: { label: string; transactions: Transaction[] } } = {};
-  txns.forEach(txn => {
-    const dateKey = new Date(txn.createdAt).toDateString();
-    if (!groups[dateKey]) {
-      groups[dateKey] = { label: formatDate(txn.createdAt), transactions: [] };
-    }
-    groups[dateKey].transactions.push(txn);
-  });
-  return Object.values(groups);
-};
-
-export default function History({ onNavigate }: { onNavigate: (s: Screen) => void }) {
+export default function HistoryScreen() {
+  const navigation = useNavigation<any>();
   const { employee } = useApp();
   const [filter, setFilter] = useState<FilterType>('ALL');
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -85,104 +82,181 @@ export default function History({ onNavigate }: { onNavigate: (s: Screen) => voi
     }
   }, [employee]);
 
-  const filteredTxns = useMemo(() => {
-    if (filter === 'ALL') return transactions;
-    return transactions.filter(t => t.type === filter);
+  const sections = useMemo(() => {
+    const filtered = filter === 'ALL' ? transactions : transactions.filter(t => t.type === filter);
+    const groups: { [key: string]: { title: string, data: Transaction[] } } = {};
+    
+    filtered.forEach(txn => {
+      const dateKey = new Date(txn.createdAt).toDateString();
+      if (!groups[dateKey]) {
+        groups[dateKey] = { title: formatDate(txn.createdAt), data: [] };
+      }
+      groups[dateKey].data.push(txn);
+    });
+    
+    return Object.values(groups);
   }, [transactions, filter]);
 
-  const grouped = useMemo(() => groupByDate(filteredTxns), [filteredTxns]);
+  const fmt = (n: number) => n.toLocaleString('vi-VN');
 
-  const formatMoney = (n: number) => n.toLocaleString('vi-VN');
+  const renderTransaction = ({ item }: { item: Transaction }) => {
+    const icon = getTransactionIcon(item.type);
+    const status = getStatusBadge(item.status);
+    return (
+      <View style={styles.card}>
+        <View style={styles.leftPart}>
+          <View style={[styles.iconBox, { backgroundColor: icon.bg }]}>
+            <MaterialCommunityIcons name={icon.name === 'smartphone' ? 'cellphone' : (icon.name === 'wallet' ? 'wallet' : 'receipt')} size={24} color={icon.color} />
+          </View>
+          <View style={styles.info}>
+            <Text style={styles.title} numberOfLines={1}>{getTransactionLabel(item)}</Text>
+            <View style={styles.meta}>
+              <Text style={styles.time}>{formatTime(item.createdAt)}</Text>
+              <View style={styles.dot} />
+              <View style={[styles.statusBadge, { backgroundColor: status.bg }]}>
+                <Text style={[styles.statusText, { color: status.color }]}>{status.label}</Text>
+              </View>
+            </View>
+          </View>
+        </View>
+        <View style={styles.rightPart}>
+          <Text style={styles.amount}>- {fmt(item.amount)}đ</Text>
+        </View>
+      </View>
+    );
+  };
+
+  const renderHeader = () => (
+    <View style={styles.header}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabs}>
+        {FILTER_TABS.map(tab => (
+          <TouchableOpacity
+            key={tab.key}
+            onPress={() => setFilter(tab.key)}
+            style={[styles.tab, filter === tab.key && styles.tabActive]}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.tabText, filter === tab.key && styles.tabTextActive]}>{tab.label}</Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+    </View>
+  );
+
+  const renderFooter = () => (
+    <View style={styles.footer}>
+      <LinearGradient 
+        colors={['#6366f1', '#8b5cf6']} 
+        style={styles.promoCard} 
+        start={{ x: 0, y: 0 }} 
+        end={{ x: 1, y: 1 }}
+      >
+        <View style={styles.promoContent}>
+          <Text style={styles.promoTitle}>Thanh toán hóa đơn {"\n"}nhận hoàn tiền 5%</Text>
+          <Text style={styles.promoSubtitle}>Ưu đãi dành riêng cho người dùng EWA tháng này. Thanh toán ngay!</Text>
+          
+          <TouchableOpacity 
+            onPress={() => navigation.navigate('BillPayment')}
+            style={styles.promoBtn}
+          >
+            <Text style={styles.promoBtnText}>Thanh toán ngay</Text>
+          </TouchableOpacity>
+
+          <View style={styles.promoIconOuter}>
+            <View style={styles.promoIconInner}>
+              <MaterialCommunityIcons name="gift-outline" size={40} color="#fff" />
+            </View>
+          </View>
+        </View>
+      </LinearGradient>
+    </View>
+  );
 
   return (
-    <div className="flex-1 flex flex-col bg-slate-50">
-      <TopBar title="Lịch sử giao dịch" onBack={() => onNavigate('dashboard')} />
+    <SafeAreaView style={styles.container}>
+      <TopBar title="Lịch sử giao dịch" onBack={() => navigation.goBack()} />
       
-      <div className="flex-1 overflow-y-auto px-6 py-4 pb-32">
-        {/* Tabs */}
-        <nav className="flex gap-2 mb-8 overflow-x-auto pb-2 no-scrollbar">
-          {FILTER_TABS.map(tab => (
-            <button
-              key={tab.key}
-              onClick={() => setFilter(tab.key)}
-              className={`px-5 py-2.5 rounded-full font-semibold text-sm whitespace-nowrap transition-all ${
-                filter === tab.key
-                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200 active:scale-95'
-                  : 'bg-white border border-slate-200 text-slate-600 font-medium hover:bg-slate-50'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </nav>
-
-        {loading ? (
-          <div className="flex justify-center py-12">
-            <div className="animate-spin w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full"></div>
-          </div>
-        ) : filteredTxns.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 gap-4 text-slate-400">
-            <Receipt className="w-16 h-16 opacity-30" />
-            <p className="font-medium text-sm">Chưa có giao dịch nào</p>
-          </div>
-        ) : (
-          <div className="space-y-8">
-            {grouped.map((group, gi) => (
-              <section key={gi}>
-                <h2 className="text-slate-500 font-bold text-xs tracking-widest uppercase mb-4 ml-1">{group.label}</h2>
-                <div className="space-y-3">
-                  {group.transactions.map(txn => {
-                    const icon = getTransactionIcon(txn.type);
-                    const status = getStatusBadge(txn.status);
-                    const Icon = icon.Icon;
-                    return (
-                      <div key={txn.id} className="bg-white rounded-2xl p-4 flex items-center justify-between shadow-sm border border-slate-100">
-                        <div className="flex items-center gap-4">
-                          <div className={`w-12 h-12 rounded-xl ${icon.bg} flex items-center justify-center`}>
-                            <Icon className={`w-6 h-6 ${icon.color}`} />
-                          </div>
-                          <div>
-                            <h3 className="font-bold text-slate-900 text-sm">{getTransactionLabel(txn)}</h3>
-                            <div className="flex items-center gap-2 mt-1">
-                              <span className="text-slate-500 text-[10px] font-medium">{formatTime(txn.createdAt)}</span>
-                              <span className="w-1 h-1 rounded-full bg-slate-300"></span>
-                              <span className={`px-2 py-0.5 rounded-md ${status.bg} ${status.color} text-[9px] font-bold tracking-wider`}>{status.label}</span>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <span className="text-base font-bold text-slate-900">- {formatMoney(txn.amount)}đ</span>
-                          {txn.fee > 0 && <p className="text-[10px] text-slate-400 mt-0.5">Phí: {formatMoney(txn.fee)}đ</p>}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </section>
-            ))}
-
-            {/* Promo */}
-            <section className="mt-8">
-              <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 to-purple-600 p-8 text-white shadow-lg">
-                <div className="relative z-10 flex flex-col items-center text-center gap-4">
-                  <div className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/30">
-                    <Gift className="w-8 h-8 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-bold leading-tight mb-2">Thanh toán hóa đơn nhận hoàn tiền 5%</h3>
-                    <p className="text-white/80 text-xs font-medium leading-relaxed">Ưu đãi dành riêng cho người dùng EWA tháng này.</p>
-                  </div>
-                  <button onClick={() => onNavigate('bill')} className="mt-2 px-6 py-3 bg-white text-indigo-700 font-bold text-sm rounded-xl hover:shadow-xl transition-all active:scale-95">
-                    Thanh toán ngay
-                  </button>
-                </div>
-                <div className="absolute -right-10 -bottom-10 w-48 h-48 bg-white/10 rounded-full blur-2xl"></div>
-                <div className="absolute -left-10 top-0 w-32 h-32 bg-purple-400/30 rounded-full blur-2xl"></div>
-              </div>
-            </section>
-          </div>
-        )}
-      </div>
-    </div>
+      {loading ? (
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color={colors.indigo600} />
+        </View>
+      ) : (
+        <SectionList
+          sections={sections}
+          keyExtractor={(item) => item.id}
+          renderItem={renderTransaction}
+          renderSectionHeader={({ section: { title } }) => (
+            <Text style={styles.sectionHeader}>{title.toUpperCase()}</Text>
+          )}
+          ListHeaderComponent={renderHeader}
+          ListFooterComponent={renderFooter}
+          contentContainerStyle={styles.listContent}
+          stickySectionHeadersEnabled={false}
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={
+            <View style={styles.empty}>
+              <Feather name="file-text" size={64} color={colors.slate200} />
+              <Text style={styles.emptyText}>Chưa có giao dịch nào</Text>
+            </View>
+          }
+        />
+      )}
+    </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#f8fafc' },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  listContent: { paddingBottom: 100 },
+  header: { paddingVertical: 16, paddingHorizontal: 24 },
+  tabs: { gap: 12 },
+  tab: {
+    paddingHorizontal: 24, paddingVertical: 10, borderRadius: 25,
+    backgroundColor: '#e2e8f0',
+  },
+  tabActive: { backgroundColor: '#4f46e5', ...shadows.md },
+  tabText: { fontSize: 13, fontWeight: '700', color: colors.slate600 },
+  tabTextActive: { color: colors.white },
+  sectionHeader: {
+    fontSize: 12, fontWeight: '800', color: colors.slate900,
+    letterSpacing: 1, marginTop: 24, marginBottom: 16, marginHorizontal: 24,
+  },
+  card: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    backgroundColor: colors.white, marginHorizontal: 24, marginBottom: 12,
+    padding: 16, borderRadius: 32,
+    ...shadows.sm,
+  },
+  leftPart: { flexDirection: 'row', alignItems: 'center', gap: 16, flex: 1 },
+  iconBox: { width: 48, height: 48, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  info: { flex: 1 },
+  title: { fontSize: 15, fontWeight: '700', color: colors.slate900 },
+  meta: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
+  time: { fontSize: 11, color: colors.slate500, fontWeight: '600' },
+  dot: { width: 3, height: 3, borderRadius: 1.5, backgroundColor: colors.slate300 },
+  statusBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
+  statusText: { fontSize: 9, fontWeight: '900', letterSpacing: 0.5 },
+  rightPart: { alignItems: 'flex-end' },
+  amount: { fontSize: 16, fontWeight: '800', color: colors.slate900 },
+  empty: { alignItems: 'center', justifyContent: 'center', paddingVertical: 60, gap: 16 },
+  emptyText: { fontSize: 14, color: colors.slate400, fontWeight: '500' },
+  footer: { paddingHorizontal: 24, marginTop: 24 },
+  promoCard: { borderRadius: 40, padding: 32, overflow: 'hidden' },
+  promoContent: { alignItems: 'center', gap: 16 },
+  promoTitle: { fontSize: 24, fontWeight: '900', color: '#fff', textAlign: 'center', lineHeight: 32 },
+  promoSubtitle: { fontSize: 13, color: 'rgba(255,255,255,0.85)', textAlign: 'center', fontWeight: '500', lineHeight: 20 },
+  promoBtn: { backgroundColor: '#fff', paddingHorizontal: 32, paddingVertical: 14, borderRadius: 25, marginTop: 8 },
+  promoBtnText: { color: colors.indigo700, fontSize: 15, fontWeight: '900' },
+  promoIconOuter: { 
+    width: 120, height: 120, borderRadius: 60, 
+    backgroundColor: 'rgba(255,255,255,0.1)', 
+    alignItems: 'center', justifyContent: 'center',
+    marginTop: 10
+  },
+  promoIconInner: { 
+    width: 90, height: 90, borderRadius: 45, 
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center', justifyContent: 'center'
+  },
+});
