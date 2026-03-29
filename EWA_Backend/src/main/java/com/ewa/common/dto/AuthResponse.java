@@ -29,7 +29,7 @@ public class AuthResponse {
         private Object linkedBank;
 
         public static EmployeeResponse fromEntity(Employee employee, double grossSalary, int workingDays,
-                double advancedAmount) {
+                double advancedAmount, Object linkedBank) {
             return EmployeeResponse.builder()
                     .id(employee.getEmployeeCode()) // Frontend uses code as ID currently
                     .name(employee.getFullName())
@@ -37,7 +37,7 @@ public class AuthResponse {
                     .grossSalary(grossSalary)
                     .workingDays(workingDays)
                     .advancedAmount(advancedAmount)
-                    .linkedBank(null) // Mock bank for now
+                    .linkedBank(linkedBank) // Mock bank for now
                     .build();
         }
     }

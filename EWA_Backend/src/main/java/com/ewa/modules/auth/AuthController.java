@@ -27,8 +27,7 @@ public class AuthController {
         try {
             Employee employee = authService.verifyEmployee(request);
             // In a real application we would trigger OTP generation here
-            return ResponseEntity.ok(AuthResponse.EmployeeResponse.fromEntity(
-                    employee, 20000000, 15, 0));
+            return ResponseEntity.ok(authService.getEmployeeDetails(employee));
         } catch (RuntimeException e) {
             return ResponseEntity.status(404).body(Map.of("message", e.getMessage()));
         }

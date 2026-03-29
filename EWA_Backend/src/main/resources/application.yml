@@ -8,29 +8,37 @@ spring:
     show-sql: 'true'
   application:
     name: ewa
+
   datasource:
-    hikari:
-      connection-timeout: '30000'
-      idle-timeout: '10000'
-      keepalive-time: '0'
-      maximum-pool-size: '2'
-      max-lifetime: '25000'
-      connection-test-query: SELECT 1
-      minimum-idle: '0'
-    password: npg_fTFq3EKZls9k
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://ep-dry-dew-a1askz5i-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require}
+    username: ${SPRING_DATASOURCE_USERNAME:neondb_owner}
+    password: ${SPRING_DATASOURCE_PASSWORD:CHANGE_ME}
     driver-class-name: org.postgresql.Driver
-    username: neondb_owner
-    url: jdbc:postgresql://ep-dry-dew-a1askz5i-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require
+    hikari:
+      connection-timeout: 30000
+      idle-timeout: 10000
+      keepalive-time: 0
+      maximum-pool-size: 2
+      max-lifetime: 25000
+      connection-test-query: SELECT 1
+      minimum-idle: 0
+
+  jpa:
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:update}
+    show-sql: false
+
 logging:
   level:
     org:
       springframework:
         web:
-          nodeValue: DEBUG
-          servlet: DEBUG
-          filter: DEBUG
-        boot:
-          web:
-            servlet: DEBUG
+          servlet: INFO
+          filter: INFO
+
 jwt:
-  secret: d0eff2cc4fd31183d73bd1ad913f228d33fb429340012133c7f5f05655bd4042
+  secret: ${JWT_SECRET:d0eff2cc4fd31183d73bd1ad913f228d33fb429340012133c7f5f05655bd4042}
+  expiration: ${JWT_EXPIRATION:86400000}

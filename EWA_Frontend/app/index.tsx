@@ -1,10 +1,41 @@
-// Màn hình Home - Hiển thị hạn mức và thao tác rút tiền
+// Màn hình Home - Hiển thị hạn mức và thao tác nhanh
 import { View, Text, TouchableOpacity, SafeAreaView, StatusBar, ScrollView, RefreshControl } from 'react-native';
-import { Bell, History, Menu, DollarSign, CreditCard, LogOut, ChevronRight, Wallet } from 'lucide-react-native';
+import { Bell, History, DollarSign, CreditCard, LogOut, ChevronRight, Wallet, Smartphone, FileText } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { calculateLimit, getTransactionHistory } from '../services/api';
+
+// Helper: Lấy icon, label, color theo loại giao dịch
+const getTransactionMeta = (type: string) => {
+    switch (type) {
+        case 'TOPUP':
+            return {
+                label: 'Nạp tiền ĐT',
+                iconBg: 'bg-orange-100',
+                iconColor: '#F97316',
+                amountColor: 'text-orange-600',
+                Icon: Smartphone,
+            };
+        case 'BILL_PAYMENT':
+            return {
+                label: 'Thanh toán HĐ',
+                iconBg: 'bg-violet-100',
+                iconColor: '#7C3AED',
+                amountColor: 'text-violet-600',
+                Icon: FileText,
+            };
+        case 'WITHDRAWAL':
+        default:
+            return {
+                label: 'Rút tiền',
+                iconBg: 'bg-emerald-100',
+                iconColor: '#10B981',
+                amountColor: 'text-emerald-600',
+                Icon: DollarSign,
+            };
+    }
+};
 
 export default function HomeScreen() {
     const router = useRouter();
@@ -114,37 +145,64 @@ export default function HomeScreen() {
                     </View>
                 </View>
 
-                {/* Quick Actions */}
-                <View className="flex-row gap-4 mb-6">
-                    <TouchableOpacity
-                        className="flex-1 bg-white p-4 rounded-xl border border-slate-100 items-center"
-                        onPress={() => router.push('/withdraw')}
-                    >
-                        <View className="w-12 h-12 bg-emerald-100 rounded-full items-center justify-center mb-2">
-                            <Wallet color="#10B981" size={24} />
-                        </View>
-                        <Text className="font-semibold text-slate-800 text-sm">Rút tiền</Text>
-                    </TouchableOpacity>
+                {/* Quick Actions - Bento Grid */}
+                <View className="mb-6">
+                    <Text className="font-heading text-slate-800 text-lg mb-3">Tiện ích</Text>
+                    <View className="flex-col gap-3">
+                        {/* Row 1 */}
+                        <View className="flex-row gap-3">
+                            <TouchableOpacity
+                                className="flex-1 bg-white p-5 rounded-2xl border border-slate-100 shadow-sm"
+                                onPress={() => router.push('/withdraw')}
+                                activeOpacity={0.7}
+                            >
+                                <View className="w-10 h-10 bg-emerald-50 rounded-xl items-center justify-center mb-3">
+                                    <Wallet color="#10B981" size={20} />
+                                </View>
+                                <Text className="font-semibold text-slate-800 text-base">Rút tiền</Text>
+                                <Text className="text-slate-400 text-xs mt-1">Chuyển về tài khoản</Text>
+                            </TouchableOpacity>
 
-                    <TouchableOpacity
-                        className="flex-1 bg-white p-4 rounded-xl border border-slate-100 items-center"
-                        onPress={() => router.push('/link-bank')}
-                    >
-                        <View className="w-12 h-12 bg-primary-100 rounded-full items-center justify-center mb-2">
-                            <CreditCard color="#4F46E5" size={24} />
+                            <TouchableOpacity
+                                className="flex-1 bg-white p-5 rounded-2xl border border-slate-100 shadow-sm"
+                                onPress={() => router.push('/topup')}
+                                activeOpacity={0.7}
+                            >
+                                <View className="w-10 h-10 bg-orange-50 rounded-xl items-center justify-center mb-3">
+                                    <Smartphone color="#F97316" size={20} />
+                                </View>
+                                <Text className="font-semibold text-slate-800 text-base">Nạp ĐT</Text>
+                                <Text className="text-slate-400 text-xs mt-1">Miễn phí giao dịch</Text>
+                            </TouchableOpacity>
                         </View>
-                        <Text className="font-semibold text-slate-800 text-sm">Liên kết TK</Text>
-                    </TouchableOpacity>
+                        
+                        {/* Row 2 */}
+                        <View className="flex-row gap-3">
+                            <TouchableOpacity
+                                className="flex-1 bg-white p-5 rounded-2xl border border-slate-100 shadow-sm"
+                                onPress={() => router.push('/bill-payment')}
+                                activeOpacity={0.7}
+                            >
+                                <View className="w-10 h-10 bg-violet-50 rounded-xl items-center justify-center mb-3">
+                                    <FileText color="#7C3AED" size={20} />
+                                </View>
+                                <Text className="font-semibold text-slate-800 text-base">Hóa đơn</Text>
+                                <Text className="text-slate-400 text-xs mt-1">Điện, nước, internet</Text>
+                            </TouchableOpacity>
 
-                    <TouchableOpacity
-                        className="flex-1 bg-white p-4 rounded-xl border border-slate-100 items-center"
-                        onPress={() => router.push('/history')}
-                    >
-                        <View className="w-12 h-12 bg-amber-100 rounded-full items-center justify-center mb-2">
-                            <History color="#F59E0B" size={24} />
+                            <TouchableOpacity
+                                className="flex-1 bg-white p-5 rounded-2xl border border-slate-100 shadow-sm"
+                                onPress={() => router.push('/history')}
+                                activeOpacity={0.7}
+                            >
+                                <View className="w-10 h-10 bg-primary-50 rounded-xl items-center justify-center mb-3">
+                                    <History color="#2563EB" size={20} />
+                                </View>
+                                <Text className="font-semibold text-slate-800 text-base">Lịch sử</Text>
+                                <Text className="text-slate-400 text-xs mt-1">Quản lý giao dịch</Text>
+                            </TouchableOpacity>
                         </View>
-                        <Text className="font-semibold text-slate-800 text-sm">Lịch sử</Text>
-                    </TouchableOpacity>
+                    </View>
                 </View>
 
                 {/* Bank Account Status */}
@@ -170,7 +228,7 @@ export default function HomeScreen() {
                     <ChevronRight color="#94A3B8" size={20} />
                 </TouchableOpacity>
 
-                {/* Recent Transactions */}
+                {/* Recent Transactions (Sprint 2: type-based rendering) */}
                 <View className="flex-row justify-between items-center mb-4">
                     <Text className="text-slate-800 font-bold text-lg">Giao dịch gần đây</Text>
                     <TouchableOpacity onPress={() => router.push('/history')}>
@@ -184,23 +242,29 @@ export default function HomeScreen() {
                         <Text className="text-slate-400 mt-2">Chưa có giao dịch nào</Text>
                     </View>
                 ) : (
-                    recentTransactions.map((txn) => (
-                        <View key={txn.id} className="bg-white p-4 rounded-xl border border-slate-100 mb-3 flex-row items-center justify-between">
-                            <View className="flex-row items-center gap-3">
-                                <View className="bg-emerald-100 p-2 rounded-full">
-                                    <DollarSign color="#10B981" size={20} />
+                    recentTransactions.map((txn) => {
+                        const meta = getTransactionMeta(txn.type);
+                        const TxnIcon = meta.Icon;
+                        return (
+                            <View key={txn.id} className="bg-white p-4 rounded-xl border border-slate-100 mb-3 flex-row items-center justify-between">
+                                <View className="flex-row items-center gap-3">
+                                    <View className={`${meta.iconBg} p-2 rounded-full`}>
+                                        <TxnIcon color={meta.iconColor} size={20} />
+                                    </View>
+                                    <View>
+                                        <Text className="text-slate-800 font-semibold">{meta.label}</Text>
+                                        <Text className="text-slate-400 text-xs">{formatDate(txn.createdAt)}</Text>
+                                    </View>
                                 </View>
-                                <View>
-                                    <Text className="text-slate-800 font-semibold">Rút tiền</Text>
-                                    <Text className="text-slate-400 text-xs">{formatDate(txn.createdAt)}</Text>
+                                <View className="items-end">
+                                    <Text className={`${meta.amountColor} font-bold`}>-{formatCurrency(txn.amount)}</Text>
+                                    <Text className="text-slate-400 text-xs">
+                                        {txn.fee > 0 ? `Phí: ${formatCurrency(txn.fee)}` : 'Miễn phí'}
+                                    </Text>
                                 </View>
                             </View>
-                            <View className="items-end">
-                                <Text className="text-emerald-600 font-bold">-{formatCurrency(txn.amount)}</Text>
-                                <Text className="text-slate-400 text-xs">Phí: {formatCurrency(txn.fee)}</Text>
-                            </View>
-                        </View>
-                    ))
+                        );
+                    })
                 )}
 
             </ScrollView>

@@ -1,16 +1,57 @@
-// Màn hình Lịch sử Giao dịch
-import { View, Text, TouchableOpacity, SafeAreaView, StatusBar, FlatList, ActivityIndicator } from 'react-native';
-import { ArrowLeft, DollarSign, Calendar, Filter } from 'lucide-react-native';
+// Màn hình Lịch sử Giao dịch (Sprint 2: phân loại theo type) - Redesigned UI/UX
+import { View, Text, TouchableOpacity, SafeAreaView, StatusBar, FlatList, ActivityIndicator, ScrollView } from 'react-native';
+import { ArrowLeft, DollarSign, Calendar, Filter, Wallet, Smartphone, FileText } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { getTransactionHistory } from '../services/api';
+
+// Helper: Lấy metadata theo loại giao dịch - Streamlined colors for deductions
+const getTransactionMeta = (type: string) => {
+    switch (type) {
+        case 'TOPUP':
+            return {
+                label: 'Nạp tiền ĐT',
+                sublabel: 'Mobile Top-up',
+                iconBg: 'bg-slate-100',
+                iconColor: '#64748B', // Slate-500
+                accentColor: 'text-slate-700',
+                badgeBg: 'bg-slate-100',
+                badgeText: 'text-slate-700',
+                Icon: Smartphone,
+            };
+        case 'BILL_PAYMENT':
+            return {
+                label: 'Thanh toán HĐ',
+                sublabel: 'Bill Payment',
+                iconBg: 'bg-slate-100',
+                iconColor: '#64748B',
+                accentColor: 'text-slate-700',
+                badgeBg: 'bg-slate-100',
+                badgeText: 'text-slate-700',
+                Icon: FileText,
+            };
+        case 'WITHDRAWAL':
+        default:
+            return {
+                label: 'Rút tiền',
+                sublabel: 'Bank Transfer',
+                iconBg: 'bg-primary-50',
+                iconColor: '#2563EB', // Trust Blue
+                accentColor: 'text-primary-700',
+                badgeBg: 'bg-primary-50',
+                badgeText: 'text-primary-700',
+                Icon: Wallet,
+            };
+    }
+};
 
 export default function HistoryScreen() {
     const router = useRouter();
     const { user } = useAuth();
     const [transactions, setTransactions] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [filterType, setFilterType] = useState<string | null>(null);
 
     useEffect(() => {
         loadTransactions();
@@ -26,6 +67,10 @@ export default function HistoryScreen() {
         }
         setIsLoading(false);
     };
+
+    const filteredTransactions = filterType
+        ? transactions.filter((t) => t.type === filterType)
+        : transactions;
 
     const formatCurrency = (amount) => {
         return new Intl.NumberFormat('vi-VN').format(amount) + ' ₫';
@@ -45,10 +90,10 @@ export default function HistoryScreen() {
 
     const getStatusColor = (status) => {
         switch (status) {
-            case 'SUCCESS': return 'bg-emerald-100 text-emerald-700';
-            case 'PENDING': return 'bg-amber-100 text-amber-700';
-            case 'FAILED': return 'bg-red-100 text-red-700';
-            default: return 'bg-slate-100 text-slate-700';
+            case 'SUCCESS': return 'bg-success-50 text-success-700'; // Using success green for status
+            case 'PENDING': return 'bg-amber-50 text-amber-700';
+            case 'FAILED': return 'bg-red-50 text-red-700';
+            default: return 'bg-slate-50 text-slate-700';
         }
     };
 
@@ -61,47 +106,85 @@ export default function HistoryScreen() {
         }
     };
 
-    const renderTransaction = ({ item }) => (
-        <View className="bg-white p-4 rounded-xl border border-slate-100 mb-3">
-            <View className="flex-row items-start justify-between mb-3">
-                <View className="flex-row items-center gap-3">
-                    <View className="bg-primary-100 p-2 rounded-full">
-                        <DollarSign color="#4F46E5" size={20} />
-                    </View>
-                    <View>
-                        <Text className="text-slate-800 font-semibold">Rút lương</Text>
-                        <Text className="text-slate-400 text-xs">{item.id}</Text>
-                    </View>
-                </View>
-                <View className={`px-2 py-1 rounded-full ${getStatusColor(item.status).split(' ')[0]}`}>
-                    <Text className={`text-xs font-medium ${getStatusColor(item.status).split(' ')[1]}`}>
-                        {getStatusText(item.status)}
-                    </Text>
-                </View>
-            </View>
+    // Thông tin phụ theo loại giao dịch
+    const getExtraInfo = (item: any) => {
+        switch (item.type) {
+            case 'TOPUP':
+                return `${item.carrier || ''} • ${item.phoneNumber || ''}`;
+            case 'BILL_PAYMENT':
+                return `${item.provider || ''} • MKH: ${item.customerId || ''}`;
+            case 'WITHDRAWAL':
+                return item.bankName || '';
+            default:
+                return '';
+        }
+    };
 
-            <View className="bg-slate-50 p-3 rounded-lg">
-                <View className="flex-row justify-between mb-2">
-                    <Text className="text-slate-500 text-sm">Số tiền rút</Text>
-                    <Text className="text-slate-800 font-semibold">{formatCurrency(item.amount)}</Text>
-                </View>
-                <View className="flex-row justify-between mb-2">
-                    <Text className="text-slate-500 text-sm">Phí giao dịch</Text>
-                    <Text className="text-slate-600">{formatCurrency(item.fee)}</Text>
-                </View>
-                <View className="h-px bg-slate-200 my-2" />
-                <View className="flex-row justify-between">
-                    <Text className="text-slate-500 text-sm">Thực nhận</Text>
-                    <Text className="text-emerald-600 font-bold">{formatCurrency(item.netAmount)}</Text>
-                </View>
-            </View>
+    const renderTransaction = ({ item }) => {
+        const meta = getTransactionMeta(item.type);
+        const TxnIcon = meta.Icon;
+        const extraInfo = getExtraInfo(item);
 
-            <View className="flex-row items-center mt-3">
-                <Calendar color="#94A3B8" size={14} />
-                <Text className="text-slate-400 text-xs ml-1">{formatDate(item.createdAt)}</Text>
+        return (
+            <View className="bg-white p-5 rounded-2xl border border-slate-100 mb-4 shadow-sm">
+                <View className="flex-row items-start justify-between mb-4">
+                    <View className="flex-row items-center gap-3">
+                        <View className={`${meta.iconBg} w-10 h-10 rounded-xl items-center justify-center`}>
+                            <TxnIcon color={meta.iconColor} size={20} />
+                        </View>
+                        <View>
+                            <Text className="text-slate-800 font-semibold text-base">{meta.label}</Text>
+                            {extraInfo ? (
+                                <Text className="text-slate-500 text-xs mt-0.5">{extraInfo}</Text>
+                            ) : (
+                                <Text className="text-slate-500 text-xs mt-0.5">{item.id}</Text>
+                            )}
+                        </View>
+                    </View>
+                    <View className={`px-2.5 py-1 rounded-md ${getStatusColor(item.status).split(' ')[0]}`}>
+                        <Text className={`text-[10px] font-bold uppercase tracking-wide ${getStatusColor(item.status).split(' ')[1]}`}>
+                            {getStatusText(item.status)}
+                        </Text>
+                    </View>
+                </View>
+
+                <View className="bg-slate-50/50 p-4 rounded-xl border border-slate-100">
+                    <View className="flex-row justify-between items-center mb-2">
+                        <Text className="text-slate-500 text-sm">Số tiền</Text>
+                        <Text className="text-slate-900 font-bold text-base">-{formatCurrency(item.amount)}</Text>
+                    </View>
+                    <View className="flex-row justify-between items-center">
+                        <Text className="text-slate-500 text-sm">Phí giao dịch</Text>
+                        <Text className={item.fee === 0 ? 'text-success font-semibold text-sm' : 'text-slate-600 text-sm'}>
+                            {item.fee === 0 ? 'Miễn phí' : formatCurrency(item.fee)}
+                        </Text>
+                    </View>
+                    {item.type === 'WITHDRAWAL' && (
+                        <>
+                            <View className="h-px bg-slate-200 my-3" />
+                            <View className="flex-row justify-between items-center">
+                                <Text className="text-slate-500 text-sm font-medium">Thực nhận</Text>
+                                <Text className="text-success font-bold text-base">{formatCurrency(item.netAmount)}</Text>
+                            </View>
+                        </>
+                    )}
+                </View>
+
+                <View className="flex-row items-center mt-4">
+                    <Calendar color="#94A3B8" size={14} />
+                    <Text className="text-slate-400 text-xs ml-1.5">{formatDate(item.createdAt)}</Text>
+                </View>
             </View>
-        </View>
-    );
+        );
+    };
+
+    // Filter buttons using Trust Blue for active state
+    const filterOptions = [
+        { key: null, label: 'Tất cả' },
+        { key: 'WITHDRAWAL', label: 'Rút tiền' },
+        { key: 'TOPUP', label: 'Nạp ĐT' },
+        { key: 'BILL_PAYMENT', label: 'Hóa đơn' },
+    ];
 
     return (
         <SafeAreaView className="flex-1 bg-slate-50">
@@ -115,29 +198,59 @@ export default function HistoryScreen() {
                     </TouchableOpacity>
                     <Text className="font-heading text-lg text-slate-900">Lịch sử giao dịch</Text>
                 </View>
-                <TouchableOpacity className="p-2 bg-slate-100 rounded-full">
-                    <Filter color="#64748B" size={20} />
-                </TouchableOpacity>
+            </View>
+
+            {/* Filter Tabs */}
+            <View className="flex-row px-6 py-3 gap-2 bg-white border-b border-slate-100 shadow-sm z-10">
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                    <View className="flex-row gap-2 pr-6">
+                        {filterOptions.map((opt) => {
+                            const isActive = filterType === opt.key;
+                            return (
+                                <TouchableOpacity
+                                    key={opt.key || 'all'}
+                                    className={`px-5 py-2 rounded-xl border ${
+                                        isActive
+                                            ? 'bg-primary border-primary'
+                                            : 'bg-white border-slate-200'
+                                    }`}
+                                    onPress={() => setFilterType(opt.key)}
+                                    activeOpacity={0.7}
+                                >
+                                    <Text className={`text-sm font-semibold ${
+                                        isActive ? 'text-white' : 'text-slate-600'
+                                    }`}>
+                                        {opt.label}
+                                    </Text>
+                                </TouchableOpacity>
+                            );
+                        })}
+                    </View>
+                </ScrollView>
             </View>
 
             {isLoading ? (
                 <View className="flex-1 items-center justify-center">
-                    <ActivityIndicator size="large" color="#4F46E5" />
+                    <ActivityIndicator size="large" color="#2563EB" />
                 </View>
-            ) : transactions.length === 0 ? (
+            ) : filteredTransactions.length === 0 ? (
                 <View className="flex-1 items-center justify-center px-6">
-                    <View className="w-20 h-20 bg-slate-100 rounded-full items-center justify-center mb-4">
-                        <DollarSign color="#CBD5E1" size={40} />
+                    <View className="w-24 h-24 bg-slate-100 rounded-full items-center justify-center mb-5">
+                        <DollarSign color="#CBD5E1" size={48} />
                     </View>
-                    <Text className="text-slate-800 font-semibold text-lg mb-2">Chưa có giao dịch</Text>
-                    <Text className="text-slate-500 text-center">Các giao dịch rút lương của bạn sẽ xuất hiện ở đây</Text>
+                    <Text className="text-slate-800 font-heading text-xl mb-2">Chưa có giao dịch</Text>
+                    <Text className="text-slate-500 text-center leading-5">
+                        {filterType
+                            ? 'Không có giao dịch nào thuộc phân loại này.'
+                            : 'Các giao dịch rút lương, nạp tiền và thanh toán hóa đơn của bạn sẽ xuất hiện ở đây.'}
+                    </Text>
                 </View>
             ) : (
                 <FlatList
-                    data={transactions}
+                    data={filteredTransactions}
                     renderItem={renderTransaction}
                     keyExtractor={(item) => item.id}
-                    contentContainerStyle={{ padding: 24 }}
+                    contentContainerStyle={{ padding: 20 }}
                     showsVerticalScrollIndicator={false}
                 />
             )}

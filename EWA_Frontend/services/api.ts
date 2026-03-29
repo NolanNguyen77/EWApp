@@ -95,12 +95,7 @@ export const processWithdrawal = async (employeeId: string, amount: number): Pro
 };
 
 export const calculateLimit = (employee: Employee): number => {
-    const STANDARD_WORKING_DAYS = 22;
-    const ADVANCE_PERCENTAGE = 0.5;
-    const dailyRate = employee.grossSalary / STANDARD_WORKING_DAYS;
-    const earnedAmount = dailyRate * employee.workingDays * ADVANCE_PERCENTAGE;
-    const availableLimit = earnedAmount - employee.advancedAmount;
-    return Math.floor(availableLimit / 1000) * 1000;
+    return mockApi.calculateLimit(employee);
 };
 
 export const calculateFee = (amount: number): number => {
@@ -108,4 +103,22 @@ export const calculateFee = (amount: number): number => {
     const FEE_LOW = 10000;
     const FEE_HIGH = 20000;
     return amount < FEE_THRESHOLD ? FEE_LOW : FEE_HIGH;
+};
+
+// ========== SPRINT 2: Nạp tiền điện thoại ==========
+export const detectCarrier = (phoneNumber: string) => {
+    return mockApi.detectCarrier(phoneNumber);
+};
+
+export const processTopup = async (employeeId: string, phoneNumber: string, denomination: number): Promise<{ success: boolean; data?: any; error?: string }> => {
+    return mockApi.processTopup(employeeId, phoneNumber, denomination);
+};
+
+// ========== SPRINT 2: Thanh toán hóa đơn ==========
+export const lookupBill = async (serviceType: string, customerId: string): Promise<{ success: boolean; data?: any; error?: string }> => {
+    return mockApi.lookupBill(serviceType, customerId);
+};
+
+export const payBill = async (employeeId: string, billKey: string): Promise<{ success: boolean; data?: any; error?: string }> => {
+    return mockApi.payBill(employeeId, billKey);
 };

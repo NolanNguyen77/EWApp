@@ -27,6 +27,41 @@ public class AuthService {
                 .orElseThrow(() -> new RuntimeException("Mã nhân viên không tồn tại"));
     }
 
+    public AuthResponse.EmployeeResponse getEmployeeDetails(Employee employee) {
+        long grossSalary = 20000000;
+        int workingDays = 15;
+        long advancedAmount = 0;
+        Object linkedBank = null;
+
+        switch (employee.getEmployeeCode()) {
+            case "NV001":
+                grossSalary = 20000000;
+                workingDays = 15;
+                advancedAmount = 2020000;
+                break;
+            case "NV002":
+                grossSalary = 15000000;
+                workingDays = 20;
+                advancedAmount = 0;
+                linkedBank = java.util.Map.of("bankCode", "VCB", "accountNo", "1234567890", "accountName", "TRAN THI B");
+                break;
+            case "NV003":
+                grossSalary = 10000000;
+                workingDays = 10;
+                advancedAmount = 2272000;
+                linkedBank = java.util.Map.of("bankCode", "MB", "accountNo", "5555666677", "accountName", "LE VAN C");
+                break;
+            case "NV004":
+                grossSalary = 5000000;
+                workingDays = 5;
+                advancedAmount = 0;
+                linkedBank = java.util.Map.of("bankCode", "ACB", "accountNo", "9999888877", "accountName", "PHAM THI D");
+                break;
+        }
+
+        return AuthResponse.EmployeeResponse.fromEntity(employee, grossSalary, workingDays, advancedAmount, linkedBank);
+    }
+
     public AuthResponse verifyOtp(OtpRequest request) {
         if (!DEV_OTP.equals(request.getOtp())) {
             throw new RuntimeException("OTP không hợp lệ");
@@ -40,11 +75,7 @@ public class AuthService {
 
         return AuthResponse.builder()
                 .token(jwtToken)
-                .employee(AuthResponse.EmployeeResponse.fromEntity(
-                        employee,
-                        20000000,
-                        15,
-                        0))
+                .employee(getEmployeeDetails(employee))
                 .build();
     }
 }
