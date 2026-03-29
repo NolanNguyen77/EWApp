@@ -1,22 +1,58 @@
-import { ArrowLeft } from 'lucide-react';
+import React from 'react';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { Feather } from '@expo/vector-icons';
+import { colors } from '../theme/colors';
 
 interface Props {
   title: string;
-  onBack: () => void;
+  onBack?: () => void;
 }
 
 export default function TopBar({ title, onBack }: Props) {
+  const navigation = useNavigation();
+
+  const handleBack = () => {
+    if (onBack) onBack();
+    else navigation.goBack();
+  };
+
   return (
-    <header className="sticky top-0 z-40 bg-slate-50/80 backdrop-blur-xl">
-      <div className="flex items-center px-6 h-16 w-full">
-        <button
-          onClick={onBack}
-          className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-slate-200/50 transition-colors active:scale-95 -ml-2 text-indigo-600"
-        >
-          <ArrowLeft className="w-6 h-6" />
-        </button>
-        <h1 className="ml-2 font-bold text-lg tracking-tight text-indigo-900">{title}</h1>
-      </div>
-    </header>
+    <View style={styles.container}>
+      <TouchableOpacity onPress={handleBack} style={styles.backBtn} activeOpacity={0.7}>
+        <Feather name="arrow-left" size={24} color={colors.indigo600} />
+      </TouchableOpacity>
+      <Text style={styles.title}>{title}</Text>
+      <View style={styles.placeholder} />
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    height: 60,
+    backgroundColor: 'rgba(248,250,252,0.9)',
+    borderBottomWidth: 0,
+  },
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  title: {
+    flex: 1,
+    textAlign: 'center',
+    fontSize: 17,
+    fontWeight: '700',
+    color: colors.indigo900,
+    letterSpacing: -0.3,
+  },
+  placeholder: {
+    width: 40,
+  },
+});

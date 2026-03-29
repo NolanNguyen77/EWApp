@@ -1,13 +1,22 @@
-import { useState } from 'react';
-import { ArrowLeft, Search, Landmark, CreditCard, ChevronRight, CheckCircle2, Loader2 } from 'lucide-react';
-import { Screen } from '../types';
-import { useApp } from '../AppContext';
-import * as mockApi from '@/services/mockApi';
-import { MOCK_BANKS } from '@/data/mockData';
+import React, { useState } from 'react';
+import {
+  View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView,
+  FlatList, ActivityIndicator,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useNavigation } from '@react-navigation/native';
+import { useApp } from '../context/AppContext';
+import * as mockApi from '../services/mockApi';
+import { MOCK_BANKS } from '../data/mockData';
+import TopBar from '../components/TopBar';
+import { colors, shadows } from '../theme/colors';
 
 type LinkStep = 'select-bank' | 'enter-account' | 'confirm';
 
-export default function LinkBank({ onNavigate }: { onNavigate: (s: Screen) => void }) {
+export default function LinkBankScreen() {
+  const navigation = useNavigation<any>();
   const { employee, refreshEmployee } = useApp();
   const [step, setStep] = useState<LinkStep>('select-bank');
   const [selectedBank, setSelectedBank] = useState<{ code: string; name: string } | null>(null);
@@ -18,23 +27,27 @@ export default function LinkBank({ onNavigate }: { onNavigate: (s: Screen) => vo
   const [success, setSuccess] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  const popularBanks = MOCK_BANKS.map(b => ({
-    id: b.code.toLowerCase(),
+  const banksData = MOCK_BANKS.map(b => ({
     code: b.code,
     name: b.name,
     shortName: b.code,
-    color: b.code === 'VCB' ? 'bg-emerald-50 text-emerald-600' :
-           b.code === 'TCB' ? 'bg-red-50 text-red-600' :
-           b.code === 'MB'  ? 'bg-indigo-50 text-indigo-600' :
-           b.code === 'ACB' ? 'bg-blue-50 text-blue-600' :
-           'bg-cyan-50 text-cyan-600',
+    color: b.code === 'VCB' ? colors.emerald600 :
+           b.code === 'TCB' ? colors.red600 :
+           b.code === 'MB'  ? colors.indigo600 :
+           b.code === 'ACB' ? colors.blue500 :
+           colors.cyan600,
+    bgColor: b.code === 'VCB' ? colors.emerald50 :
+             b.code === 'TCB' ? colors.red50 :
+             b.code === 'MB'  ? colors.indigo50 :
+             b.code === 'ACB' ? colors.blue50 :
+             colors.cyan50,
   }));
 
   const filteredBanks = searchQuery
-    ? popularBanks.filter(b => b.name.toLowerCase().includes(searchQuery.toLowerCase()) || b.code.toLowerCase().includes(searchQuery.toLowerCase()))
-    : popularBanks;
+    ? banksData.filter(b => b.name.toLowerCase().includes(searchQuery.toLowerCase()) || b.code.toLowerCase().includes(searchQuery.toLowerCase()))
+    : banksData;
 
-  const handleSelectBank = (bank: typeof popularBanks[0]) => {
+  const handleSelectBank = (bank: typeof banksData[0]) => {
     setSelectedBank({ code: bank.code, name: bank.name });
     setStep('enter-account');
     setError('');
@@ -43,16 +56,11 @@ export default function LinkBank({ onNavigate }: { onNavigate: (s: Screen) => vo
   };
 
   const handleLookup = async () => {
-    if (!accountNo.trim()) {
-      setError('Vui lòng nhập số tài khoản');
-      return;
-    }
+    if (!accountNo.trim()) { setError('Vui lòng nhập số tài khoản'); return; }
     setLoading(true);
     setError('');
-
     const result = await mockApi.lookupBankAccount(selectedBank!.code, accountNo);
     setLoading(false);
-
     if (result.success) {
       setAccountName(result.accountName!);
       setStep('confirm');
@@ -65,184 +73,212 @@ export default function LinkBank({ onNavigate }: { onNavigate: (s: Screen) => vo
     if (!employee) return;
     setLoading(true);
     setError('');
-
     const result = await mockApi.linkBankAccount(employee.id, {
       bankCode: selectedBank!.code,
       accountNo,
       accountName,
     });
     setLoading(false);
-
     if (result.success) {
       setSuccess(true);
       refreshEmployee();
-      setTimeout(() => onNavigate('dashboard'), 1500);
+      setTimeout(() => navigation.goBack(), 1500);
     } else {
       setError(result.error || 'Không thể liên kết tài khoản');
     }
   };
 
+  const handleBack = () => {
+    if (step === 'enter-account') { setStep('select-bank'); setError(''); }
+    else if (step === 'confirm') { setStep('enter-account'); setError(''); }
+    else navigation.goBack();
+  };
+
+  if (!employee) return null;
+
   return (
-    <div className="flex-1 flex flex-col bg-surface text-on-surface min-h-screen pb-32">
-      {/* TopAppBar */}
-      <header className="fixed top-0 w-full z-50 bg-slate-50/70 backdrop-blur-xl shadow-[0_4px_12px_rgba(0,0,0,0.04)]">
-        <div className="flex items-center justify-between px-6 h-16 w-full max-w-xl mx-auto">
-          <button 
-            onClick={() => {
-              if (step === 'enter-account') { setStep('select-bank'); setError(''); }
-              else if (step === 'confirm') { setStep('enter-account'); setError(''); }
-              else onNavigate('dashboard');
-            }}
-            className="active:scale-95 duration-200 text-primary w-10 h-10 flex items-center justify-start"
-          >
-            <ArrowLeft className="w-6 h-6" />
-          </button>
-          <h1 className="font-bold text-lg tracking-tight text-primary flex-grow text-center">Liên kết ngân hàng</h1>
-          <div className="w-10"></div>
-        </div>
-      </header>
-
-      <main className="pt-24 px-6 max-w-xl mx-auto space-y-8 w-full overflow-y-auto">
+    <SafeAreaView style={styles.container}>
+      <TopBar title="Liên kết ngân hàng" onBack={handleBack} />
+      
+      <View style={styles.main}>
         {success ? (
-          <div className="flex flex-col items-center justify-center py-16 gap-4">
-            <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center">
-              <CheckCircle2 className="w-10 h-10 text-emerald-500" />
-            </div>
-            <h2 className="text-xl font-bold text-slate-900">Liên kết thành công!</h2>
-            <p className="text-sm text-slate-500">{selectedBank?.name} • ****{accountNo.slice(-4)}</p>
-          </div>
+          <View style={styles.successContainer}>
+            <View style={styles.successIconBox}>
+              <Feather name="check" size={40} color={colors.emerald600} />
+            </View>
+            <Text style={styles.successTitle}>Liên kết thành công!</Text>
+            <Text style={styles.successSubtitle}>{selectedBank?.name} • ****{accountNo.slice(-4)}</Text>
+          </View>
         ) : step === 'select-bank' ? (
-          <>
-            {/* Search Section */}
-            <section className="space-y-4">
-              <div className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-on-surface-variant/50" />
-                <input 
-                  type="text" 
-                  placeholder="Tìm kiếm ngân hàng..." 
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-surface-container-high border-none rounded-xl h-14 pl-12 pr-5 text-on-surface font-medium focus:ring-2 focus:ring-primary/30 transition-shadow" 
-                />
-              </div>
-            </section>
+          <View style={{ flex: 1 }}>
+            <View style={styles.searchContainer}>
+              <Feather name="search" size={20} color={colors.slate400} style={styles.searchIcon} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Tìm kiếm ngân hàng..."
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholderTextColor={colors.slate400}
+              />
+            </View>
 
-            {/* Popular Banks */}
-            <section className="space-y-4">
-              <h2 className="text-sm font-bold text-on-surface-variant/60 tracking-widest uppercase pl-2">Ngân hàng phổ biến</h2>
-              <div className="grid grid-cols-2 gap-4">
-                {filteredBanks.map(bank => (
-                  <button 
-                    key={bank.id} 
-                    onClick={() => handleSelectBank(bank)}
-                    className="bg-white p-4 rounded-xl flex flex-col items-center gap-3 shadow-sm border border-outline-variant/20 active:scale-95 transition-all hover:border-primary/30"
-                  >
-                    <div className={`w-12 h-12 rounded-full flex items-center justify-center ${bank.color}`}>
-                      <Landmark className="w-6 h-6" />
-                    </div>
-                    <div className="text-center">
-                      <p className="font-bold text-sm text-on-surface">{bank.shortName}</p>
-                      <p className="text-[10px] text-on-surface-variant mt-0.5">{bank.name}</p>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </section>
-
-            {/* Other Methods */}
-            <section className="space-y-4">
-              <h2 className="text-sm font-bold text-on-surface-variant/60 tracking-widest uppercase pl-2">Phương thức khác</h2>
-              <button className="w-full bg-white p-4 rounded-xl flex items-center gap-4 shadow-sm border border-outline-variant/20 active:scale-95 transition-all hover:border-primary/30 group">
-                <div className="w-12 h-12 rounded-full bg-surface-container flex items-center justify-center text-on-surface-variant group-hover:bg-primary/10 group-hover:text-primary transition-colors">
-                  <CreditCard className="w-6 h-6" />
-                </div>
-                <div className="text-left flex-grow">
-                  <p className="font-bold text-sm text-on-surface">Thêm thẻ ATM/Tín dụng</p>
-                  <p className="text-xs text-on-surface-variant mt-0.5">Hỗ trợ thẻ Visa, Mastercard, JCB</p>
-                </div>
-                <ChevronRight className="w-5 h-5 text-outline-variant group-hover:text-primary transition-colors" />
-              </button>
-            </section>
-          </>
+            <FlatList
+              data={filteredBanks}
+              keyExtractor={(item) => item.code}
+              numColumns={2}
+              columnWrapperStyle={styles.bankGrid}
+              contentContainerStyle={styles.listContent}
+              ListHeaderComponent={<Text style={styles.sectionTitle}>NGÂN HÀNG PHỔ BIẾN</Text>}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  onPress={() => handleSelectBank(item)}
+                  style={styles.bankCard}
+                  activeOpacity={0.8}
+                >
+                  <View style={[styles.bankIconBox, { backgroundColor: item.bgColor }]}>
+                    <MaterialCommunityIcons name="bank" size={24} color={item.color} />
+                  </View>
+                  <Text style={styles.bankShortName}>{item.shortName}</Text>
+                  <Text style={styles.bankFullName} numberOfLines={1}>{item.name}</Text>
+                </TouchableOpacity>
+              )}
+            />
+          </View>
         ) : step === 'enter-account' ? (
-          <>
-            <section className="space-y-4">
-              <div className="bg-indigo-50 p-4 rounded-xl flex items-center gap-3">
-                <Landmark className="w-6 h-6 text-indigo-600" />
-                <div>
-                  <p className="font-bold text-sm text-indigo-700">{selectedBank?.name}</p>
-                  <p className="text-xs text-indigo-500">Nhập số tài khoản ngân hàng</p>
-                </div>
-              </div>
-            </section>
+          <ScrollView contentContainerStyle={styles.formContainer}>
+            <View style={styles.bankBanner}>
+              <MaterialCommunityIcons name="bank" size={24} color={colors.indigo600} />
+              <View>
+                <Text style={styles.bannerBankName}>{selectedBank?.name}</Text>
+                <Text style={styles.bannerHint}>Nhập số tài khoản ngân hàng</Text>
+              </View>
+            </View>
 
-            <section className="space-y-4">
-              <label className="text-[11px] font-bold uppercase tracking-widest text-slate-500 px-1">Số tài khoản</label>
-              <input
-                type="text"
+            <View style={styles.inputSection}>
+              <Text style={styles.inputLabel}>SỐ TÀI KHOẢN</Text>
+              <TextInput
+                style={styles.accountInput}
                 placeholder="Nhập số tài khoản"
                 value={accountNo}
-                onChange={(e) => { setAccountNo(e.target.value); setError(''); }}
-                onKeyDown={(e) => e.key === 'Enter' && handleLookup()}
+                onChangeText={(val) => { setAccountNo(val); setError(''); }}
+                keyboardType="numeric"
                 autoFocus
-                className="w-full bg-white border-none rounded-xl py-4 px-5 text-lg font-bold text-slate-900 focus:ring-2 focus:ring-indigo-500/30 shadow-sm tracking-wider"
               />
+            </View>
 
-              {error && (
-                <div className="bg-red-50 text-red-600 text-sm font-medium px-4 py-3 rounded-xl border border-red-100">
-                  {error}
-                </div>
-              )}
+            {error ? <View style={styles.errorBox}><Text style={styles.errorText}>{error}</Text></View> : null}
 
-              <button
-                onClick={handleLookup}
-                disabled={loading}
-                className="w-full bg-gradient-to-r from-indigo-600 to-blue-600 text-white font-bold py-4 rounded-xl shadow-lg active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-60"
-              >
-                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Search className="w-5 h-5" />}
-                {loading ? 'Đang tra cứu...' : 'Tra cứu tài khoản'}
-              </button>
-            </section>
-          </>
+            <TouchableOpacity
+              onPress={handleLookup}
+              disabled={loading}
+              style={styles.actionBtn}
+              activeOpacity={0.85}
+            >
+              <LinearGradient colors={[colors.indigo600, colors.blue500]} style={styles.actionGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
+                {loading ? <ActivityIndicator color="#fff" /> : (
+                  <View style={styles.btnContent}>
+                    <Feather name="search" size={20} color="#fff" />
+                    <Text style={styles.btnText}>Tra cứu tài khoản</Text>
+                  </View>
+                )}
+              </LinearGradient>
+            </TouchableOpacity>
+          </ScrollView>
         ) : (
-          <>
-            <section className="space-y-6">
-              <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 space-y-4">
-                <h3 className="font-bold text-lg text-slate-900">Xác nhận liên kết</h3>
-                <div className="space-y-3">
-                  <div className="flex justify-between py-2 border-b border-dashed border-slate-100">
-                    <span className="text-sm text-slate-500">Ngân hàng</span>
-                    <span className="text-sm font-bold text-slate-900">{selectedBank?.name}</span>
-                  </div>
-                  <div className="flex justify-between py-2 border-b border-dashed border-slate-100">
-                    <span className="text-sm text-slate-500">Số tài khoản</span>
-                    <span className="text-sm font-bold text-slate-900">{accountNo}</span>
-                  </div>
-                  <div className="flex justify-between py-2">
-                    <span className="text-sm text-slate-500">Chủ tài khoản</span>
-                    <span className="text-sm font-bold text-emerald-600">{accountName}</span>
-                  </div>
-                </div>
-              </div>
+          <ScrollView contentContainerStyle={styles.formContainer}>
+            <View style={styles.confirmCard}>
+              <Text style={styles.confirmTitle}>Xác nhận liên kết</Text>
+              <View style={styles.confirmDetails}>
+                <View style={styles.confirmRow}>
+                  <Text style={styles.confirmLabel}>Ngân hàng</Text>
+                  <Text style={styles.confirmValue}>{selectedBank?.name}</Text>
+                </View>
+                <View style={[styles.confirmRow, styles.confirmRowBorder]}>
+                  <Text style={styles.confirmLabel}>Số tài khoản</Text>
+                  <Text style={styles.confirmValue}>{accountNo}</Text>
+                </View>
+                <View style={styles.confirmRow}>
+                  <Text style={styles.confirmLabel}>Chủ tài khoản</Text>
+                  <Text style={[styles.confirmValue, { color: colors.emerald600 }]}>{accountName}</Text>
+                </View>
+              </View>
+            </View>
 
-              {error && (
-                <div className="bg-red-50 text-red-600 text-sm font-medium px-4 py-3 rounded-xl border border-red-100">
-                  {error}
-                </div>
-              )}
+            {error ? <View style={styles.errorBox}><Text style={styles.errorText}>{error}</Text></View> : null}
 
-              <button
-                onClick={handleLink}
-                disabled={loading}
-                className="w-full bg-gradient-to-r from-indigo-600 to-blue-600 text-white font-bold py-4 rounded-xl shadow-lg active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-60"
-              >
-                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle2 className="w-5 h-5" />}
-                {loading ? 'Đang xử lý...' : 'Xác nhận liên kết'}
-              </button>
-            </section>
-          </>
+            <TouchableOpacity
+              onPress={handleLink}
+              disabled={loading}
+              style={styles.actionBtn}
+              activeOpacity={0.85}
+            >
+              <LinearGradient colors={[colors.indigo600, colors.blue500]} style={styles.actionGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
+                {loading ? <ActivityIndicator color="#fff" /> : (
+                  <View style={styles.btnContent}>
+                    <Feather name="link" size={20} color="#fff" />
+                    <Text style={styles.btnText}>Xác nhận liên kết</Text>
+                  </View>
+                )}
+              </LinearGradient>
+            </TouchableOpacity>
+          </ScrollView>
         )}
-      </main>
-    </div>
+      </View>
+    </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
+  main: { flex: 1 },
+  successContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 16 },
+  successIconBox: { width: 100, height: 100, borderRadius: 50, backgroundColor: '#ecfdf5', alignItems: 'center', justifyContent: 'center' },
+  successTitle: { fontSize: 24, fontWeight: '800', color: colors.slate900 },
+  successSubtitle: { fontSize: 16, color: colors.slate500, fontWeight: '500' },
+  searchContainer: {
+    flexDirection: 'row', alignItems: 'center', backgroundColor: colors.slate100,
+    margin: 24, paddingHorizontal: 16, height: 60, borderRadius: 30,
+  },
+  searchIcon: { marginRight: 12 },
+  searchInput: { flex: 1, fontSize: 16, fontWeight: '600', color: colors.slate900 },
+  listContent: { paddingHorizontal: 24, paddingBottom: 40 },
+  sectionTitle: { fontSize: 11, fontWeight: '700', color: colors.slate500, letterSpacing: 1.2, marginBottom: 16, marginLeft: 4 },
+  bankGrid: { justifyContent: 'space-between', gap: 12, marginBottom: 12 },
+  bankCard: {
+    width: '48%', backgroundColor: colors.white, borderRadius: 32, padding: 20,
+    alignItems: 'center', gap: 12, borderWidth: 1, borderColor: colors.slate100, ...shadows.sm,
+  },
+  bankIconBox: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center' },
+  bankShortName: { fontSize: 16, fontWeight: '900', color: colors.slate900, marginTop: 4 },
+  bankFullName: { fontSize: 11, color: colors.slate400, textAlign: 'center', fontWeight: '500' },
+  formContainer: { padding: 24, gap: 24 },
+  bankBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    backgroundColor: 'rgba(79, 70, 229, 0.05)', padding: 20, borderRadius: 24,
+  },
+  bannerBankName: { fontSize: 16, fontWeight: '800', color: colors.indigo700 },
+  bannerHint: { fontSize: 13, color: colors.indigo500, fontWeight: '500' },
+  inputSection: { gap: 12 },
+  inputLabel: { fontSize: 11, fontWeight: '700', color: colors.slate500, letterSpacing: 1.2, marginLeft: 4 },
+  accountInput: {
+    backgroundColor: colors.white, borderRadius: 24, paddingHorizontal: 24,
+    height: 72, fontSize: 24, fontWeight: '800', color: colors.slate900,
+    borderWidth: 1, borderColor: colors.slate100, ...shadows.sm,
+  },
+  errorBox: { backgroundColor: colors.red50, padding: 16, borderRadius: 16, borderWidth: 1, borderColor: '#fee2e2' },
+  errorText: { color: colors.red600, fontSize: 14, fontWeight: '500' },
+  actionBtn: { borderRadius: 32, overflow: 'hidden', ...shadows.primary, marginTop: 12 },
+  actionGradient: { height: 64, alignItems: 'center', justifyContent: 'center' },
+  btnContent: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  btnText: { color: '#fff', fontSize: 16, fontWeight: '800' },
+  confirmCard: {
+    backgroundColor: colors.white, borderRadius: 32, padding: 24,
+    borderWidth: 1, borderColor: colors.slate100, ...shadows.md,
+  },
+  confirmTitle: { fontSize: 20, fontWeight: '800', color: colors.slate900, marginBottom: 20 },
+  confirmDetails: { gap: 4 },
+  confirmRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 12 },
+  confirmRowBorder: { borderBottomWidth: 1, borderBottomColor: colors.slate50, borderStyle: 'dashed' },
+  confirmLabel: { fontSize: 14, color: colors.slate500, fontWeight: '500' },
+  confirmValue: { fontSize: 15, fontWeight: '800', color: colors.slate900 },
+});

@@ -1,21 +1,28 @@
-import { useEffect, useState } from 'react';
-import { Bell, BadgeCheck, Landmark, CheckCircle2, Wallet, Tag, Receipt, AlertCircle, LogOut } from 'lucide-react';
-import { Screen } from '../types';
-import { useApp } from '../AppContext';
-import * as mockApi from '@/services/mockApi';
+import React, { useEffect, useState } from 'react';
+import {
+  View, Text, ScrollView, TouchableOpacity, StyleSheet, Image,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Feather, MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { useApp } from '../context/AppContext';
+import * as mockApi from '../services/mockApi';
+import { MOCK_BANKS } from '../data/mockData';
+import { colors, shadows } from '../theme/colors';
+import { RootStackParamList } from '../types';
 
-export default function Dashboard({ onNavigate }: { onNavigate: (s: Screen) => void }) {
+type DashboardNav = StackNavigationProp<RootStackParamList>;
+
+export default function DashboardScreen() {
+  const navigation = useNavigation<DashboardNav>();
   const { employee, refreshEmployee, logout } = useApp();
   const [limit, setLimit] = useState(0);
 
+  useEffect(() => { refreshEmployee(); }, []);
   useEffect(() => {
-    refreshEmployee();
-  }, []);
-
-  useEffect(() => {
-    if (employee) {
-      setLimit(mockApi.calculateLimit(employee));
-    }
+    if (employee) setLimit(mockApi.calculateLimit(employee));
   }, [employee]);
 
   if (!employee) return null;
@@ -24,147 +31,372 @@ export default function Dashboard({ onNavigate }: { onNavigate: (s: Screen) => v
   const earnedSalary = Math.floor(dailyRate * employee.workingDays);
   const workProgress = Math.round((employee.workingDays / 22) * 100);
   const hasLinkedBank = !!employee.linkedBank;
+  const fmt = (n: number) => n.toLocaleString('vi-VN');
 
-  const formatMoney = (n: number) => n.toLocaleString('vi-VN');
+  const bankIconUrl = hasLinkedBank 
+    ? MOCK_BANKS.find(b => b.code === employee.linkedBank!.bankCode)?.logoUrl 
+    : null;
+
+  const handleLogout = async () => {
+    await logout();
+  };
 
   return (
-    <div className="flex-1 overflow-y-auto pb-32">
-      {/* Header */}
-      <header className="flex justify-between items-center px-6 py-4 sticky top-0 bg-slate-50/80 backdrop-blur-xl z-40">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-slate-200 overflow-hidden">
-            <img src="https://i.pravatar.cc/150?img=68" alt="User" className="w-full h-full object-cover" />
-          </div>
-          <div>
-            <p className="text-[10px] text-slate-500 font-medium uppercase tracking-wider">Xin chào, {employee.name.split(' ').pop()}</p>
-            <h1 className="text-indigo-700 font-black text-2xl tracking-tight leading-none">EWA</h1>
-          </div>
-        </div>
-        <div className="flex items-center gap-1">
-          <button className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-slate-200/50 transition-colors">
-            <Bell className="w-6 h-6 text-indigo-600" />
-          </button>
-          <button onClick={() => { logout(); onNavigate('login'); }} className="w-10 h-10 flex items-center justify-center rounded-full bg-red-50 hover:bg-red-100 transition-colors" title="Đăng xuất">
-            <LogOut className="w-5 h-5 text-red-500" />
-          </button>
-        </div>
-      </header>
+    <SafeAreaView style={styles.safeArea}>
+      <ScrollView 
+        style={styles.container} 
+        contentContainerStyle={{ paddingBottom: 120 }} 
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={styles.headerLeft}>
+            <Image 
+              source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAtgGHEZcBhR3Rr2E1gKVQ6t79m8YETipj1g5Tk-HoExtMUqny_U8d9DsbLoVbdq2nQQAsIsjIUcrJQ98XqOI7luS0dGwoLPeqo5ieZ2pzRlSIA3el3QfJW9EpJmi7X9rw736ElV6-Zv1foUtxqO09-wF-BgpejFy36CWp6WvlDfghlFMcFQh2aXF8pvGKtGp_ltQPjjeOZikqx_vhbnxnOaWFoOf1RZn4UISypaL3pG-5tSN4HyPc46200d0ASWlyPtTOpI2dAzZEz' }} 
+              style={styles.avatarImg}
+            />
+            <View>
+              <Text style={styles.greetLabel}>CHÀO BUỔI SÁNG</Text>
+              <Text style={styles.brandName}>EWA</Text>
+            </View>
+          </View>
+          <View style={styles.headerRight}>
+            <TouchableOpacity style={styles.headerBtn}>
+              <Feather name="bell" size={20} color={colors.indigo600} />
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.headerBtn, styles.logoutBtn]} onPress={handleLogout}>
+              <Feather name="log-out" size={20} color={colors.red600} />
+            </TouchableOpacity>
+          </View>
+        </View>
 
-      <div className="px-6 space-y-6 mt-2">
-        {/* Hero Card */}
-        <section className="relative">
-          <div className="absolute -top-12 -left-12 w-48 h-48 bg-indigo-500/10 rounded-full blur-3xl"></div>
-          <div className="absolute -bottom-12 -right-12 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl"></div>
-          
-          <div className="relative bg-white/70 backdrop-blur-xl rounded-3xl p-8 shadow-[0_20px_40px_rgba(79,70,229,0.05)] border border-white">
-            <div className="flex justify-between items-start mb-6">
-              <div>
-                <p className="text-slate-500 font-medium text-sm mb-1">Hạn mức khả dụng</p>
-                <h2 className="text-4xl font-black text-indigo-700 tracking-tighter">
-                  {formatMoney(limit)}<span className="text-xl font-bold ml-1">đ</span>
-                </h2>
-              </div>
-              <div className="bg-indigo-50 px-3 py-1 rounded-full flex items-center gap-1">
-                <BadgeCheck className="w-4 h-4 text-indigo-600" />
-                <span className="text-[11px] font-bold text-indigo-600 uppercase tracking-tight">Standard</span>
-              </div>
-            </div>
+        <View style={styles.content}>
+          {/* Hero Card */}
+          <View style={styles.heroCard}>
+            {/* Standard Badge moved here */}
+            <View style={styles.badge}>
+              <MaterialCommunityIcons name="check-decagram" size={14} color={colors.indigo600} style={{ marginRight: 4 }} />
+              <Text style={styles.badgeText}>STANDARD</Text>
+            </View>
 
-            <div className="grid grid-cols-2 gap-4 mt-8 pt-8 border-t border-slate-100">
-              <div>
-                <p className="text-xs text-slate-500 mb-1 font-medium">Lương tạm tính</p>
-                <p className="text-lg font-bold text-slate-900">{formatMoney(earnedSalary)}đ</p>
-              </div>
-              <div className="text-right">
-                <p className="text-xs text-slate-500 mb-1 font-medium">Ngày công</p>
-                <p className="text-lg font-bold text-slate-900">{employee.workingDays}/22 <span className="text-sm font-medium text-slate-500">ngày</span></p>
-              </div>
-            </div>
+            <View style={styles.heroTop}>
+              <View style={styles.heroAmountContainer}>
+                <Text style={styles.heroLabel}>Hạn mức khả dụng</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
+                  <Text 
+                    style={styles.heroAmount} 
+                    numberOfLines={1} 
+                    adjustsFontSizeToFit={true}
+                    minimumFontScale={0.6}
+                  >
+                    {fmt(limit)}
+                  </Text>
+                  <Text style={styles.heroUnit}>đ</Text>
+                </View>
+              </View>
+            </View>
 
-            <div className="mt-6">
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-[11px] font-bold text-indigo-600 uppercase">Tiến độ tháng này</span>
-                <span className="text-[11px] font-bold text-indigo-600">{workProgress}%</span>
-              </div>
-              <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
-                <div className="h-full bg-gradient-to-r from-indigo-600 to-blue-500 rounded-full transition-all duration-500" style={{ width: `${workProgress}%` }}></div>
-              </div>
-            </div>
-          </div>
-        </section>
+            {/* Salary Details Grid */}
+            <View style={styles.heroGrid}>
+              <View style={styles.heroStatItem}>
+                <Text style={styles.heroStatLabel}>Lương tạm tính</Text>
+                <Text style={styles.heroStatValue}>{fmt(earnedSalary)}đ</Text>
+              </View>
+              <View style={styles.heroStatItemEnd}>
+                <Text style={styles.heroStatLabel}>Ngày công</Text>
+                <Text style={styles.heroStatValue}>
+                  {employee.workingDays}/22 <Text style={styles.heroStatUnit}>ngày</Text>
+                </Text>
+              </View>
+            </View>
 
-        {/* Bank Status */}
-        <section 
-          onClick={() => onNavigate('link-bank')}
-          className="flex items-center justify-between bg-white px-6 py-4 rounded-2xl shadow-sm border border-slate-100 cursor-pointer active:scale-[0.98] transition-all hover:border-primary/30"
-        >
-          <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${hasLinkedBank ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
-              {hasLinkedBank ? <Landmark className="w-6 h-6" /> : <AlertCircle className="w-6 h-6" />}
-            </div>
-            <div>
-              <p className="text-xs text-slate-500 font-medium">Tài khoản liên kết</p>
-              {hasLinkedBank ? (
-                <p className="text-sm font-bold text-slate-900">
-                  {employee.linkedBank!.bankCode} ****{employee.linkedBank!.accountNo.slice(-4)} • {employee.linkedBank!.accountName}
-                </p>
-              ) : (
-                <p className="text-sm font-bold text-amber-600">Chưa liên kết ngân hàng</p>
-              )}
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            {hasLinkedBank && <CheckCircle2 className="w-5 h-5 text-emerald-500" />}
-            <span className="text-xs font-bold text-primary">{hasLinkedBank ? 'Thay đổi' : 'Liên kết'}</span>
-          </div>
-        </section>
+            {/* Progress Bar */}
+            <View style={styles.progressSection}>
+              <View style={styles.progressHeader}>
+                <Text style={styles.progressLabel}>TIẾN ĐỘ THÁNG NÀY</Text>
+                <Text style={styles.progressPercent}>{workProgress}%</Text>
+              </View>
+              <View style={styles.progressTrack}>
+                <LinearGradient
+                  colors={[colors.indigo600, colors.blue500]}
+                  style={[styles.progressBar, { width: `${workProgress}%` }]}
+                  start={{ x: 0, y: 0 }} 
+                  end={{ x: 1, y: 0 }}
+                />
+              </View>
+            </View>
+          </View>
 
-        {/* Bento Actions */}
-        <section className="grid grid-cols-4 gap-4">
-          <button 
-            onClick={() => onNavigate('withdraw')}
-            className="col-span-2 row-span-2 bg-gradient-to-br from-indigo-600 to-blue-500 rounded-3xl p-6 flex flex-col justify-between shadow-lg shadow-indigo-200 active:scale-[0.98] transition-all text-left min-h-[160px]"
-          >
-            <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center">
-              <Wallet className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h3 className="text-white font-bold text-lg leading-tight">Rút tiền</h3>
-              <p className="text-white/80 text-xs mt-1">Về tài khoản ngay</p>
-            </div>
-          </button>
+          {/* Bank Status Card */}
+          <View style={styles.bankCard}>
+            <View style={styles.bankLeft}>
+              <View style={styles.bankIconWrap}>
+                {bankIconUrl ? (
+                  <Image source={{ uri: bankIconUrl }} style={styles.bankImg} />
+                ) : (
+                  <MaterialCommunityIcons name="bank" size={20} color={colors.slate400} />
+                )}
+              </View>
+              <View>
+                <Text style={styles.bankLabel}>Tài khoản liên kết</Text>
+                <Text style={styles.bankValue}>
+                  {hasLinkedBank 
+                    ? `Vietcombank 1024****`
+                    : 'Chưa liên kết'}
+                </Text>
+              </View>
+            </View>
+            {hasLinkedBank && (
+              <MaterialCommunityIcons name="check-circle" size={24} color={colors.emerald500} />
+            )}
+          </View>
 
-          <button 
-            onClick={() => onNavigate('topup')}
-            className="col-span-2 bg-white rounded-3xl p-5 flex items-center gap-4 active:scale-[0.98] transition-all shadow-sm border border-slate-100"
-          >
-            <div className="w-10 h-10 bg-orange-50 rounded-xl flex items-center justify-center">
-              <Tag className="w-5 h-5 text-orange-500" />
-            </div>
-            <span className="font-bold text-sm text-slate-900">Nạp ĐT</span>
-          </button>
+          {/* Action Buttons */}
+          <View style={styles.actionGrid}>
+            {/* Withdraw Button */}
+            <TouchableOpacity 
+              style={styles.mainAction} 
+              onPress={() => navigation.navigate('Withdraw')} 
+              activeOpacity={0.9}
+            >
+              <LinearGradient 
+                colors={['#4f46e5', '#3b82f6']} 
+                style={StyleSheet.absoluteFill}
+                start={{ x: 0, y: 0 }} 
+                end={{ x: 1, y: 1 }}
+              />
+              <View style={styles.mainActionIcon}>
+                <Ionicons name="wallet-sharp" size={32} color="#fff" />
+              </View>
+              <View>
+                <Text style={styles.mainActionTitle}>Rút tiền</Text>
+                <Text style={styles.mainActionSub}>Về tài khoản ngay</Text>
+              </View>
+            </TouchableOpacity>
 
-          <button 
-            onClick={() => onNavigate('bill')}
-            className="col-span-2 bg-white rounded-3xl p-5 flex items-center gap-4 active:scale-[0.98] transition-all shadow-sm border border-slate-100"
-          >
-            <div className="w-10 h-10 bg-purple-50 rounded-xl flex items-center justify-center">
-              <Receipt className="w-5 h-5 text-purple-600" />
-            </div>
-            <span className="font-bold text-sm text-slate-900">Hóa đơn</span>
-          </button>
-        </section>
+            <View style={styles.sideActions}>
+              {/* Top-up Button */}
+              <TouchableOpacity 
+                style={styles.sideAction} 
+                onPress={() => navigation.navigate('TopUp')} 
+                activeOpacity={0.9}
+              >
+                <View style={[styles.sideActionIcon, { backgroundColor: '#fff7ed' }]}>
+                  <Ionicons name="phone-portrait-sharp" size={24} color="#f97316" />
+                </View>
+                <View style={styles.sideActionText}>
+                  <Text 
+                    style={styles.sideActionLabel}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit={true}
+                    minimumFontScale={0.8}
+                  >
+                    Nạp ĐT
+                  </Text>
+                  <Text style={styles.sideActionSub} numberOfLines={1}>Nạp nhanh</Text>
+                </View>
+              </TouchableOpacity>
 
-        {/* Promo Banner */}
-        <section className="rounded-3xl overflow-hidden relative h-40 group shadow-sm">
-          <div className="absolute inset-0 bg-gradient-to-r from-indigo-900 to-blue-900 flex flex-col justify-center px-8">
-            <div className="absolute right-0 top-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3"></div>
-            <p className="text-white/80 text-xs font-bold uppercase tracking-widest mb-1 relative z-10">Dành cho bạn</p>
-            <h3 className="text-white text-xl font-black max-w-[200px] leading-tight relative z-10">Nhận ngay bảo hiểm sức khỏe</h3>
-            <button className="mt-4 w-fit bg-white text-indigo-700 px-4 py-2 rounded-full text-xs font-black uppercase relative z-10">Khám phá</button>
-          </div>
-        </section>
-      </div>
-    </div>
+              {/* Bill Button */}
+              <TouchableOpacity 
+                style={styles.sideAction} 
+                onPress={() => navigation.navigate('BillPayment')} 
+                activeOpacity={0.9}
+              >
+                <View style={[styles.sideActionIcon, { backgroundColor: '#f5f3ff' }]}>
+                  <Ionicons name="receipt-sharp" size={24} color="#9333ea" />
+                </View>
+                <View style={styles.sideActionText}>
+                  <Text 
+                    style={styles.sideActionLabel}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit={true}
+                    minimumFontScale={0.8}
+                  >
+                    Hóa đơn
+                  </Text>
+                  <Text style={styles.sideActionSub} numberOfLines={1}>Điện, nước</Text>
+                </View>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Banner */}
+          <View style={styles.promoCard}>
+            <Image 
+              source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCFE9rBwQjYJ1pf-J3WtakoItU3SSFncXA36RA3fXokmezCNx95BHRPzC76CkbEoDgMImveuSxJPoGw-K-P9LkJV8DRs_xvxSd5a-rLWR2TLx3CuvkpQJKsjha45F5LsMCdkJdNI3E9XG6f_ajBy_zYUgvoXTR0n2NUTHsKnz4jFrCITBsZQmz9J9GMMsYyV2lz7khptWEZaZO8nXW0_MrTWTuoYxkAO3SXnnw3DVNIOik3ABiKJYL8ZsRxCBRAz6IpT5V3t_KsX4VY' }} 
+              style={StyleSheet.absoluteFill}
+            />
+            <LinearGradient 
+              colors={['rgba(49, 46, 129, 0.7)', 'transparent']} 
+              style={StyleSheet.absoluteFill}
+              start={{ x: 0, y: 0 }} 
+              end={{ x: 1, y: 0.5 }}
+            />
+            <View style={styles.promoBody}>
+              <Text style={styles.promoTag}>DÀNH CHO BẠN</Text>
+              <Text style={styles.promoText}>Nhận ngay bảo{'\n'}hiểm sức khỏe</Text>
+              <TouchableOpacity style={styles.promoBtn}>
+                <Text style={styles.promoBtnText}>KHÁM PHÁ</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  safeArea: { flex: 1, backgroundColor: '#f8fafc' },
+  container: { flex: 1 },
+  
+  // Header
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+  },
+  headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  avatarImg: { width: 44, height: 44, borderRadius: 22 },
+  greetLabel: { fontSize: 10, color: colors.slate500, fontWeight: '600', letterSpacing: 1.2 },
+  brandName: { fontSize: 26, fontWeight: '900', color: colors.indigo700, letterSpacing: -0.5, marginTop: -2 },
+  headerRight: { flexDirection: 'row', gap: 8 },
+  headerBtn: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: '#f1f5f9' },
+  logoutBtn: { backgroundColor: '#fef2f2' },
+  
+  content: { paddingHorizontal: 24, paddingVertical: 12, gap: 20 },
+  
+  // Hero Card
+  heroCard: { 
+    backgroundColor: '#fff', 
+    borderRadius: 40, 
+    padding: 24, 
+    paddingTop: 32, // More top padding for the absolute badge
+    ...shadows.lg, 
+    elevation: 10,
+    position: 'relative', // for absolute positioning of children
+  },
+  heroTop: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 28 },
+  heroAmountContainer: { flex: 1, flexGrow: 1, flexShrink: 1, marginRight: 64 }, // Space for badge
+  heroLabel: { fontSize: 13, color: colors.slate500, fontWeight: '700', marginBottom: 6, letterSpacing: 0.2 },
+  heroAmount: { fontSize: 40, fontWeight: '900', color: colors.indigo600, letterSpacing: -1.5 },
+  heroUnit: { fontSize: 24, fontWeight: '700', color: colors.indigo600, marginLeft: 4 },
+  badge: { 
+    position: 'absolute',
+    top: 24,
+    right: 24,
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    backgroundColor: colors.indigo50, 
+    paddingHorizontal: 10, 
+    paddingVertical: 6, 
+    borderRadius: 30,
+  },
+  badgeText: { fontSize: 10, fontWeight: '700', color: colors.indigo600, letterSpacing: 0.5 },
+  heroGrid: { 
+    flexDirection: 'row', 
+    borderTopWidth: 1, 
+    borderTopColor: '#f1f5f9', 
+    paddingTop: 24, 
+    marginBottom: 24,
+    gap: 16,
+  },
+  heroStatItem: { flex: 1 },
+  heroStatItemEnd: { flex: 1, alignItems: 'flex-end' },
+  heroStatLabel: { fontSize: 12, color: colors.slate500, marginBottom: 6, fontWeight: '500' },
+  heroStatValue: { fontSize: 18, fontWeight: '800', color: colors.slate900 },
+  heroStatUnit: { fontSize: 14, fontWeight: '500', color: colors.slate500 },
+  progressSection: { marginTop: 4 },
+  progressHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
+  progressLabel: { fontSize: 11, fontWeight: '800', color: colors.indigo600, letterSpacing: 0.5 },
+  progressPercent: { fontSize: 11, fontWeight: '800', color: colors.indigo600 },
+  progressTrack: { height: 10, backgroundColor: '#f1f5f9', borderRadius: 10, overflow: 'hidden' },
+  progressBar: { height: '100%', borderRadius: 10 },
+  
+  // Bank Status Card
+  bankCard: {
+    backgroundColor: '#fff',
+    borderRadius: 32,
+    padding: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    ...shadows.sm,
+  },
+  bankLeft: { flexDirection: 'row', alignItems: 'center', gap: 14, flex: 1 },
+  bankIconWrap: {
+    width: 48,
+    height: 48,
+    backgroundColor: '#f8fafc',
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
+  },
+  bankImg: { width: 28, height: 28, resizeMode: 'contain' },
+  bankLabel: { fontSize: 12, color: colors.slate600, fontWeight: '500', marginBottom: 2 },
+  bankValue: { fontSize: 14, fontWeight: '800', color: colors.slate900 },
+  
+  // Action Grid
+  actionGrid: { flexDirection: 'row', gap: 12, height: 180 },
+  mainAction: {
+    flex: 0.8,
+    borderRadius: 40,
+    padding: 24,
+    overflow: 'hidden',
+    justifyContent: 'space-between',
+    ...shadows.primary,
+  },
+  mainActionIcon: {
+    width: 52,
+    height: 52,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    borderRadius: 26,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mainActionTitle: { fontSize: 20, fontWeight: '800', color: '#fff' },
+  mainActionSub: { fontSize: 13, color: 'rgba(255, 255, 255, 0.85)', fontWeight: '600' },
+  sideActions: { flex: 1.1, gap: 12 },
+  sideAction: {
+    flex: 1,
+    backgroundColor: '#fff',
+    borderRadius: 36,
+    padding: 10,
+    paddingRight: 14, // Extra right padding for text
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    ...shadows.sm,
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
+  },
+  sideActionIcon: {
+    width: 44, // Reduced from 48
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sideActionText: { flex: 1 },
+  sideActionLabel: { fontSize: 16, fontWeight: '800', color: colors.slate900 },
+  sideActionSub: { fontSize: 11, color: colors.slate400, fontWeight: '500', marginTop: 1 },
+
+  // Banner
+  promoCard: {
+    borderRadius: 40,
+    overflow: 'hidden',
+    height: 180,
+    ...shadows.md,
+    marginTop: 8,
+  },
+  promoBody: { padding: 32, justifyContent: 'center', flex: 1 },
+  promoTag: { fontSize: 11, fontWeight: '800', color: 'rgba(255, 255, 255, 0.9)', letterSpacing: 1.5, marginBottom: 12 },
+  promoText: { fontSize: 22, fontWeight: '900', color: '#fff', lineHeight: 28, marginBottom: 20 },
+  promoBtn: { backgroundColor: '#fff', paddingHorizontal: 20, paddingVertical: 12, borderRadius: 30, alignSelf: 'flex-start' },
+  promoBtnText: { fontSize: 12, fontWeight: '900', color: colors.indigo600 },
+});

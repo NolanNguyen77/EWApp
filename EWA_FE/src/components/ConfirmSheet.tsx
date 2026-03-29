@@ -1,4 +1,10 @@
-import { ShieldCheck, Loader2 } from 'lucide-react';
+import React from 'react';
+import {
+  View, Text, Modal, TouchableOpacity, TouchableWithoutFeedback,
+  StyleSheet, ActivityIndicator, ScrollView,
+} from 'react-native';
+import { Feather } from '@expo/vector-icons';
+import { colors, shadows } from '../theme/colors';
 
 interface ConfirmDetail {
   label: string;
@@ -8,6 +14,7 @@ interface ConfirmDetail {
 }
 
 interface ConfirmSheetProps {
+  visible: boolean;
   title: string;
   icon?: React.ReactNode;
   details: ConfirmDetail[];
@@ -18,89 +25,195 @@ interface ConfirmSheetProps {
   onCancel: () => void;
 }
 
-export default function ConfirmSheet({ title, icon, details, note, confirmLabel = 'Xác nhận', loading, onConfirm, onCancel }: ConfirmSheetProps) {
+export default function ConfirmSheet({
+  visible, title, icon, details, note, confirmLabel = 'Xác nhận', loading, onConfirm, onCancel,
+}: ConfirmSheetProps) {
   const accentColor = (a?: string) => {
-    if (a === 'emerald') return 'text-emerald-600';
-    if (a === 'red') return 'text-red-600';
-    if (a === 'indigo') return 'text-indigo-600';
-    return 'text-slate-900';
+    if (a === 'emerald') return colors.emerald600;
+    if (a === 'red') return colors.red600;
+    if (a === 'indigo') return colors.indigo600;
+    return colors.textPrimary;
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-end justify-center" onClick={onCancel}>
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
-      
-      {/* Sheet */}
-      <div 
-        className="relative w-full max-w-md bg-white rounded-t-3xl shadow-2xl animate-[slideUp_0.3s_ease-out]"
-        onClick={e => e.stopPropagation()}
-      >
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onCancel}>
+      <TouchableWithoutFeedback onPress={onCancel}>
+        <View style={styles.backdrop} />
+      </TouchableWithoutFeedback>
+      <View style={styles.sheet}>
         {/* Drag handle */}
-        <div className="flex justify-center pt-4 pb-2">
-          <div className="w-10 h-1.5 bg-slate-200 rounded-full"></div>
-        </div>
+        <View style={styles.handle} />
 
-        <div className="px-6 pb-8 space-y-6">
+        <ScrollView showsVerticalScrollIndicator={false}>
           {/* Header */}
-          <div className="flex items-center gap-3">
-            {icon && <div className="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center">{icon}</div>}
-            <div>
-              <h3 className="text-lg font-bold text-slate-900">{title}</h3>
-              <p className="text-xs text-slate-500 font-medium">Vui lòng kiểm tra thông tin trước khi xác nhận</p>
-            </div>
-          </div>
+          <View style={styles.header}>
+            {icon && <View style={styles.iconWrap}>{icon}</View>}
+            <View style={{ flex: 1 }}>
+              <Text style={styles.title}>{title}</Text>
+              <Text style={styles.subtitle}>Vui lòng kiểm tra thông tin trước khi xác nhận</Text>
+            </View>
+          </View>
 
           {/* Details */}
-          <div className="bg-slate-50 rounded-2xl overflow-hidden">
-            <div className="divide-y divide-slate-100">
-              {details.map((item, i) => (
-                <div key={i} className="flex justify-between items-center px-5 py-4">
-                  <span className="text-sm text-slate-500 font-medium">{item.label}</span>
-                  <span className={`text-sm font-bold ${item.highlight ? 'text-lg' : ''} ${accentColor(item.accent)}`}>
-                    {item.value}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
+          <View style={styles.detailsCard}>
+            {details.map((item, i) => (
+              <View key={i} style={[styles.detailRow, i < details.length - 1 && styles.detailBorder]}>
+                <Text style={styles.detailLabel}>{item.label}</Text>
+                <Text style={[
+                  styles.detailValue,
+                  item.highlight && styles.detailHighlight,
+                  { color: accentColor(item.accent) },
+                ]}>
+                  {item.value}
+                </Text>
+              </View>
+            ))}
+          </View>
 
           {/* Note */}
           {note && (
-            <div className="flex items-start gap-3 bg-indigo-50/50 text-indigo-700 px-4 py-3 rounded-xl">
-              <ShieldCheck className="w-5 h-5 shrink-0 mt-0.5" />
-              <p className="text-xs font-medium leading-relaxed">{note}</p>
-            </div>
+            <View style={styles.noteRow}>
+              <Feather name="shield" size={16} color={colors.indigo600} style={{ marginTop: 1 }} />
+              <Text style={styles.noteText}>{note}</Text>
+            </View>
           )}
 
           {/* Actions */}
-          <div className="space-y-3">
-            <button
-              onClick={onConfirm}
-              disabled={loading}
-              className="w-full bg-gradient-to-r from-indigo-600 to-blue-600 text-white font-bold py-4 rounded-2xl shadow-[0_8px_24px_rgba(79,70,229,0.25)] active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-60"
-            >
-              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : null}
-              {loading ? 'Đang xử lý...' : confirmLabel}
-            </button>
-            <button
-              onClick={onCancel}
-              disabled={loading}
-              className="w-full text-slate-600 font-semibold py-3 rounded-xl hover:bg-slate-50 transition-all text-sm disabled:opacity-40"
-            >
-              Quay lại
-            </button>
-          </div>
-        </div>
-      </div>
+          <TouchableOpacity
+            onPress={onConfirm}
+            disabled={loading}
+            style={[styles.confirmBtn, loading && { opacity: 0.6 }]}
+            activeOpacity={0.85}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" size="small" />
+            ) : (
+              <Text style={styles.confirmText}>{confirmLabel}</Text>
+            )}
+          </TouchableOpacity>
 
-      {/* Keyframes */}
-      <style>{`
-        @keyframes slideUp {
-          from { transform: translateY(100%); }
-          to { transform: translateY(0); }
-        }
-      `}</style>
-    </div>
+          <TouchableOpacity onPress={onCancel} disabled={loading} style={styles.cancelBtn} activeOpacity={0.7}>
+            <Text style={styles.cancelText}>Quay lại</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </View>
+    </Modal>
   );
 }
+
+const styles = StyleSheet.create({
+  backdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+  },
+  sheet: {
+    backgroundColor: colors.white,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingHorizontal: 24,
+    paddingBottom: 40,
+    ...shadows.lg,
+  },
+  handle: {
+    width: 40,
+    height: 5,
+    backgroundColor: colors.slate200,
+    borderRadius: 3,
+    alignSelf: 'center',
+    marginTop: 12,
+    marginBottom: 20,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    marginBottom: 20,
+  },
+  iconWrap: {
+    width: 48,
+    height: 48,
+    backgroundColor: colors.indigo50,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  title: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  subtitle: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  detailsCard: {
+    backgroundColor: colors.surfaceVariant,
+    borderRadius: 16,
+    overflow: 'hidden',
+    marginBottom: 16,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+  },
+  detailBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: colors.slate100,
+  },
+  detailLabel: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    fontWeight: '500',
+  },
+  detailValue: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  detailHighlight: {
+    fontSize: 17,
+  },
+  noteRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: colors.indigo50,
+    borderRadius: 12,
+    padding: 14,
+    gap: 10,
+    marginBottom: 20,
+  },
+  noteText: {
+    flex: 1,
+    fontSize: 12,
+    color: colors.indigo700,
+    lineHeight: 18,
+    fontWeight: '500',
+  },
+  confirmBtn: {
+    backgroundColor: colors.primary,
+    borderRadius: 16,
+    paddingVertical: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+    ...shadows.primary,
+  },
+  confirmText: {
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  cancelBtn: {
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  cancelText: {
+    color: colors.textSecondary,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+});

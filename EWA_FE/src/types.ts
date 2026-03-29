@@ -24,12 +24,9 @@ export interface Transaction {
   netAmount: number;
   status: 'SUCCESS' | 'PENDING' | 'FAILED';
   createdAt: string;
-  // Withdrawal fields
   bankName?: string;
-  // TopUp fields
   phoneNumber?: string;
   carrier?: string;
-  // BillPayment fields
   serviceType?: string;
   provider?: string;
   customerId?: string;
@@ -54,3 +51,20 @@ export interface CarrierInfo {
     color: string;
   };
 }
+
+// Navigation param lists
+export type RootStackParamList = {
+  Login: undefined;
+  Main: undefined;
+  Withdraw: undefined;
+  TopUp: undefined;
+  BillPayment: undefined;
+  LinkBank: undefined;
+};
+
+export type TabParamList = {
+  Dashboard: undefined;
+  Offers: undefined;
+  History: undefined;
+  Profile: undefined;
+};
