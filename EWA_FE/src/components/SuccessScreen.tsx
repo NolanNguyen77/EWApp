@@ -33,7 +33,7 @@ export default function SuccessScreen({
         {/* Success Icon Visualization */}
         <View style={styles.iconContainer}>
           <LinearGradient
-            colors={['#6366f1', '#4338ca']}
+            colors={['#3949AB', '#000051']}
             style={styles.mainCircle}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
@@ -146,8 +146,8 @@ const styles = StyleSheet.create({
   mainCircle: { width: 90, height: 90, borderRadius: 45, alignItems: 'center', justifyContent: 'center', ...shadows.primary },
   dot: { position: 'absolute', width: 8, height: 8, borderRadius: 4 },
   dot1: { top: 0, right: -8, backgroundColor: '#cbd5e1' },
-  dot2: { bottom: 15, left: -15, backgroundColor: '#6366f1', opacity: 0.4 },
-  dot3: { bottom: 8, right: -15, backgroundColor: '#4f46e5' },
+  dot2: { bottom: 15, left: -15, backgroundColor: '#3949AB', opacity: 0.4 },
+  dot3: { bottom: 8, right: -15, backgroundColor: '#1A237E' },
 
   title: { fontSize: 24, fontWeight: '900', color: colors.slate900, textAlign: 'center' },
   subtitle: { fontSize: 13, color: colors.slate500, textAlign: 'center', marginTop: 6, lineHeight: 20, maxWidth: '85%' },

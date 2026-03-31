@@ -1,10 +1,10 @@
 // Design tokens — preserving exact web app color palette
 export const colors = {
-  // Primary (indigo)
-  primary: '#4f46e5',
-  primaryLight: '#eef2ff',
-  primaryDark: '#3730a3',
-  primaryContainer: '#6d5cf7',
+  // Primary (Indigo Nexus)
+  primary: '#1A237E',
+  primaryLight: '#E8EAF6',
+  primaryDark: '#000051',
+  primaryContainer: '#534BAE',
 
   // Purple accent
   purple: '#9333ea',
@@ -54,14 +54,14 @@ export const colors = {
   slate800: '#1e293b',
   slate900: '#0f172a',
 
-  // Indigo shades
-  indigo50: '#eef2ff',
-  indigo100: '#e0e7ff',
-  indigo400: '#818cf8',
-  indigo500: '#6366f1',
-  indigo600: '#4f46e5',
-  indigo700: '#4338ca',
-  indigo900: '#312e81',
+  // Indigo shades (Nexus)
+  indigo50: '#E8EAF6',
+  indigo100: '#C5CAE9',
+  indigo400: '#5C6BC0',
+  indigo500: '#3F51B5',
+  indigo600: '#3949AB',
+  indigo700: '#303F9F',
+  indigo900: '#1A237E',
 
   // Blue
   blue50: '#eff6ff',
@@ -124,7 +124,7 @@ export const shadows = {
     elevation: 8,
   },
   primary: {
-    shadowColor: '#4f46e5',
+    shadowColor: '#1A237E',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.3,
     shadowRadius: 20,

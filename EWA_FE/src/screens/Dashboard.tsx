@@ -164,7 +164,7 @@ export default function DashboardScreen() {
               activeOpacity={0.9}
             >
               <LinearGradient 
-                colors={['#4f46e5', '#3b82f6']} 
+                colors={['#1A237E', '#3949AB']} 
                 style={StyleSheet.absoluteFill}
                 start={{ x: 0, y: 0 }} 
                 end={{ x: 1, y: 1 }}
@@ -185,8 +185,8 @@ export default function DashboardScreen() {
                 onPress={() => navigation.navigate('TopUp')} 
                 activeOpacity={0.9}
               >
-                <View style={[styles.sideActionIcon, { backgroundColor: '#fff7ed' }]}>
-                  <Ionicons name="phone-portrait-sharp" size={24} color="#f97316" />
+                <View style={[styles.sideActionIcon, { backgroundColor: '#e0f7fa' }]}>
+                  <Ionicons name="phone-portrait-sharp" size={24} color="#00838f" />
                 </View>
                 <View style={styles.sideActionText}>
                   <Text 
@@ -207,8 +207,8 @@ export default function DashboardScreen() {
                 onPress={() => navigation.navigate('BillPayment')} 
                 activeOpacity={0.9}
               >
-                <View style={[styles.sideActionIcon, { backgroundColor: '#f5f3ff' }]}>
-                  <Ionicons name="receipt-sharp" size={24} color="#9333ea" />
+                <View style={[styles.sideActionIcon, { backgroundColor: colors.indigo50 }]}>
+                  <Ionicons name="receipt-sharp" size={24} color={colors.primary} />
                 </View>
                 <View style={styles.sideActionText}>
                   <Text 
@@ -232,7 +232,7 @@ export default function DashboardScreen() {
               style={StyleSheet.absoluteFill}
             />
             <LinearGradient 
-              colors={['rgba(49, 46, 129, 0.7)', 'transparent']} 
+              colors={['rgba(26, 35, 126, 0.7)', 'transparent']} 
               style={StyleSheet.absoluteFill}
               start={{ x: 0, y: 0 }} 
               end={{ x: 1, y: 0.5 }}

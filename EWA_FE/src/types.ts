@@ -37,7 +37,7 @@ export interface BillData {
   customerName: string;
   address: string;
   amount: number;
-  serviceType: 'ELECTRIC' | 'WATER';
+  serviceType: 'ELECTRIC' | 'WATER' | 'INTERNET' | 'TV' | 'TUITION' | 'APARTMENT';
   provider: string;
   period: string;
   status: 'PAID' | 'UNPAID';

@@ -84,7 +84,7 @@ export default function LoginScreen({ navigation }: { navigation: LoginNavigatio
           <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
 
             <View style={styles.iconWrapper}>
-              <LinearGradient colors={['#6366f1', '#4f46e5']} style={styles.iconGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+              <LinearGradient colors={['#303F9F', '#1A237E']} style={styles.iconGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
                 <Ionicons name="lock-closed" size={36} color="#fff" />
               </LinearGradient>
             </View>
@@ -127,7 +127,7 @@ export default function LoginScreen({ navigation }: { navigation: LoginNavigatio
               style={[styles.submitBtnWrapper, (loading || otpDigits.join('').length < 6) && { opacity: 0.5 }]}
               activeOpacity={0.85}
             >
-              <LinearGradient colors={['#5c5adb', '#4338ca']} style={styles.submitBtn} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
+              <LinearGradient colors={['#3949AB', '#1A237E']} style={styles.submitBtn} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
                 {loading
                   ? <ActivityIndicator color="#fff" size="small" />
                   : <><Text style={styles.submitText}>Xác nhận</Text><Ionicons name="arrow-forward" size={18} color="#fff" /></>}
@@ -151,7 +151,7 @@ export default function LoginScreen({ navigation }: { navigation: LoginNavigatio
 
           {/* Logo Section */}
           <View style={styles.logoSection}>
-            <LinearGradient colors={['#6366f1', '#4f46e5']} style={styles.logoBox} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+            <LinearGradient colors={['#303F9F', '#1A237E']} style={styles.logoBox} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
               <MaterialCommunityIcons name="wallet" size={40} color="#fff" />
             </LinearGradient>
             <Text style={styles.logoTitle}>EWA</Text>
@@ -191,7 +191,7 @@ export default function LoginScreen({ navigation }: { navigation: LoginNavigatio
             style={[styles.submitBtnWrapper, loading && { opacity: 0.5 }]}
             activeOpacity={0.85}
           >
-            <LinearGradient colors={['#5c5adb', '#4338ca']} style={styles.submitBtn} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
+            <LinearGradient colors={['#3949AB', '#1A237E']} style={styles.submitBtn} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
               {loading
                 ? <ActivityIndicator color="#fff" size="small" />
                 : <><Text style={styles.submitText}>Tiếp tục</Text><Ionicons name="arrow-forward" size={18} color="#fff" /></>}
@@ -245,7 +245,7 @@ const styles = StyleSheet.create({
     marginBottom: 16, 
     ...shadows.primary,
   },
-  logoTitle: { fontSize: 44, fontWeight: '900', color: '#4338ca', letterSpacing: -1 },
+  logoTitle: { fontSize: 44, fontWeight: '900', color: '#1a237e', letterSpacing: -1 },
   logoSubtitle: { fontSize: 16, color: colors.slate500, fontWeight: '600', marginTop: 4 },
 
   heading: { fontSize: 32, fontWeight: '900', color: colors.slate900, textAlign: 'center', marginBottom: 16 },

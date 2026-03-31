@@ -82,7 +82,7 @@ export default function OffersScreen() {
 
         {/* Gift Box Card */}
         <LinearGradient
-          colors={['#6366f1', '#8b5cf6']}
+          colors={['#303F9F', '#8b5cf6']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.giftCard}

@@ -146,7 +146,7 @@ export default function HistoryScreen() {
   const renderFooter = () => (
     <View style={styles.footer}>
       <LinearGradient 
-        colors={['#6366f1', '#8b5cf6']} 
+        colors={['#303F9F', '#8b5cf6']} 
         style={styles.promoCard} 
         start={{ x: 0, y: 0 }} 
         end={{ x: 1, y: 1 }}
@@ -215,7 +215,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24, paddingVertical: 10, borderRadius: 25,
     backgroundColor: '#e2e8f0',
   },
-  tabActive: { backgroundColor: '#4f46e5', ...shadows.md },
+  tabActive: { backgroundColor: '#1A237E', ...shadows.md },
   tabText: { fontSize: 13, fontWeight: '700', color: colors.slate600 },
   tabTextActive: { color: colors.white },
   sectionHeader: {

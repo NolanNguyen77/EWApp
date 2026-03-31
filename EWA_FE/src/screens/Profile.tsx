@@ -80,7 +80,7 @@ export default function ProfileScreen() {
         {/* Profile Card */}
         <View style={styles.profileCard}>
           <View style={styles.profileMain}>
-            <LinearGradient colors={[colors.indigo600, '#9333ea']} style={styles.avatarBox}>
+            <LinearGradient colors={[colors.primary, colors.indigo400]} style={styles.avatarBox}>
               <Text style={styles.avatarText}>{initials}</Text>
             </LinearGradient>
             <View style={styles.profileInfo}>

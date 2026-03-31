@@ -134,7 +134,7 @@ export const processTopup = async (employeeId: string, phoneNumber: string, deno
 
 export const lookupBill = async (serviceType: string, customerId: string) => {
   await delay(800);
-  const prefix = serviceType === 'ELECTRIC' ? 'EVN' : 'WATER';
+  const prefix = serviceType === 'ELECTRIC' ? 'EVN' : serviceType === 'WATER' ? 'WATER' : serviceType;
   const key = `${prefix}-${customerId}`;
   const bill = MOCK_BILLS[key];
   if (!bill) return { success: false, error: 'Không tìm thấy hóa đơn với mã khách hàng này' };
