@@ -33,7 +33,7 @@ export interface Transaction {
 }
 
 export interface BillData {
-  billKey: string;
+  billKey?: string; // Optional vì có thể được thêm sau khi lookup
   customerName: string;
   address: string;
   amount: number;

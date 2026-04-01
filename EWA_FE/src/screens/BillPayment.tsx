@@ -54,32 +54,68 @@ export default function BillPaymentScreen() {
     setBillData(null);
     const result = await mockApi.lookupBill(sType, cId);
     setLoading(false);
-    if (result.success) {
-      setBillData(result.data as BillData);
+    if (result.success && result.data) {
+      // Đảm bảo billKey được set đúng
+      const billDataWithKey = result.data as BillData;
+      console.log('Bill data received:', billDataWithKey);
+      console.log('Bill status:', billDataWithKey.status);
+      console.log('Should show button:', billDataWithKey.status === 'UNPAID');
+      setBillData(billDataWithKey);
     } else {
       setError(result.error || 'Không tìm thấy hóa đơn');
     }
   };
 
   const handleShowConfirm = () => {
-    if (!billData) return;
-    if (billData.amount > limit) { setError(`Số tiền (${fmt(billData.amount)}đ) vượt hạn mức (${fmt(limit)}đ)`); return; }
+    if (!billData) {
+      setError('Không có thông tin hóa đơn');
+      return;
+    }
+    if (billData.amount > limit) { 
+      setError(`Số tiền (${fmt(billData.amount)}đ) vượt hạn mức (${fmt(limit)}đ)`); 
+      return; 
+    }
+    setError(''); // Clear any existing errors
     setShowConfirm(true);
   };
 
+  const handleCancelConfirm = () => {
+    setShowConfirm(false);
+    setError(''); // Clear errors when canceling
+  };
+
   const handlePay = async () => {
-    if (!employee || !billData) return;
+    if (!employee || !billData) {
+      setShowConfirm(false);
+      setError('Thiếu thông tin nhân viên hoặc hóa đơn');
+      return;
+    }
+    if (!billData.billKey) {
+      setShowConfirm(false);
+      setError('Thiếu thông tin billKey');
+      return;
+    }
     setPaying(true);
     setError('');
-    const result = await mockApi.payBill(employee.id, billData.billKey);
-    setPaying(false);
-    if (result.success) {
+    console.log('Paying bill with key:', billData.billKey);
+    
+    try {
+      const result = await mockApi.payBill(employee.id, billData.billKey);
+      setPaying(false);
+      
+      if (result.success) {
+        setShowConfirm(false);
+        setSuccess(true);
+        refreshEmployee();
+      } else {
+        setShowConfirm(false);
+        setError(result.error || 'Thanh toán thất bại');
+      }
+    } catch (err) {
+      setPaying(false);
       setShowConfirm(false);
-      setSuccess(true);
-      refreshEmployee();
-    } else {
-      setShowConfirm(false);
-      setError(result.error || 'Thanh toán thất bại');
+      setError('Có lỗi xảy ra khi thanh toán');
+      console.error('Payment error:', err);
     }
   };
 
@@ -88,10 +124,31 @@ export default function BillPaymentScreen() {
   const activeService = SERVICES.find((s) => s.id === serviceType);
   const serviceName = activeService?.name || 'Dịch vụ';
 
+  // Debug logging
+  console.log('BillPayment render - billData:', billData);
+  console.log('BillPayment render - should show button:', !!billData);
+  console.log('BillPayment render - bill status:', billData?.status);
+
   if (success) {
     const now = new Date();
     const timeStr = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}, ${now.getDate().toString().padStart(2,'0')} Th${(now.getMonth()+1).toString().padStart(2,'0')} ${now.getFullYear()}`;
     const txId = `EWA${Date.now().toString().slice(-9)}`;
+    
+    const handleBackToDashboard = () => {
+      setSuccess(false);
+      setBillData(null);
+      setCustomerId('');
+      setError('');
+      navigation.goBack();
+    };
+    
+    const handleNewTransaction = () => {
+      setSuccess(false);
+      setBillData(null);
+      setCustomerId('');
+      setError('');
+    };
+    
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
         <SuccessScreen
@@ -108,8 +165,8 @@ export default function BillPaymentScreen() {
             { label: 'Dịch vụ', value: serviceName },
             { label: 'Khách hàng', value: billData?.customerName || '' },
           ]}
-          primaryAction={{ label: 'Về Trang chủ', onClick: () => navigation.goBack() }}
-          secondaryAction={{ label: 'Giao dịch mới', onClick: () => { setSuccess(false); setBillData(null); setCustomerId(''); } }}
+          primaryAction={{ label: 'Về Trang chủ', onClick: handleBackToDashboard }}
+          secondaryAction={{ label: 'Giao dịch mới', onClick: handleNewTransaction }}
         />
       </SafeAreaView>
     );
@@ -119,11 +176,16 @@ export default function BillPaymentScreen() {
     <SafeAreaView style={styles.safeArea}>
       <TopBar title="Thanh toán hóa đơn" />
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-        <ScrollView style={styles.scroll} contentContainerStyle={{ paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
+        <ScrollView 
+          style={styles.scroll} 
+          contentContainerStyle={{ paddingBottom: 24 }} 
+          showsVerticalScrollIndicator={true}
+          nestedScrollEnabled={true}
+        >
           
           <View style={styles.content}>
             
-            {/* Search Top Bar matching design */}
+            {/* Search Top Bar */}
             <View style={styles.searchContainer}>
               <Feather name="search" size={20} color="#767683" />
               <TextInput
@@ -144,28 +206,30 @@ export default function BillPaymentScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* Promo Banner */}
-            <View style={styles.promoBanner}>
-              <Image 
-                source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuC1UxJP8tbUo4sYL4GqBhFwcH8-eBIjPrVpwJRvOEinVJB5tcNqqoI60zK5U6QE243ewWwEFTu7QnsWC3CVD4NmbiDpn7up_a8_iurhDVdVilHuT9c7P3LLEbA4-bAoX-VlZN955XVVFzrbdSS3g3st_8hooimW-9YYhyS1ZdDKVk-fceThzq6o4Tk6CnB30r_KzaSBCem8ByNDnE-MwizfY8_oq2FxubIN8AYLTLqg79TjTdKX4coQl079_PBGqJ-B-ZXQhNx-WGxM' }} 
-                style={[StyleSheet.absoluteFill, { opacity: 0.6 }]}
-              />
-              <LinearGradient 
-                colors={['rgba(26,35,126,0.9)', 'rgba(26,35,126,0.1)']} 
-                style={styles.promoGradient}
-                start={{ x: 0, y: 0 }} 
-                end={{ x: 1, y: 0 }}
-              />
-              <View style={styles.promoContent}>
-                <Text style={styles.promoTag}>ƯU ĐÃI EWA THÁNG 10</Text>
-                <Text style={styles.promoTitle}>Giảm 20% khi thanh toán{'\n'}hóa đơn điện nước</Text>
-                <TouchableOpacity style={styles.promoBtn}>
-                  <Text style={styles.promoBtnText}>Nhận mã ngay</Text>
-                </TouchableOpacity>
+            {/* Only show promo banner when no bill data */}
+            {!billData && (
+              <View style={styles.promoBanner}>
+                <Image 
+                  source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuC1UxJP8tbUo4sYL4GqBhFwcH8-eBIjPrVpwJRvOEinVJB5tcNqqoI60zK5U6QE243ewWwEFTu7QnsWC3CVD4NmbiDpn7up_a8_iurhDVdVilHuT9c7P3LLEbA4-bAoX-VlZN955XVVFzrbdSS3g3st_8hooimW-9YYhyS1ZdDKVk-fceThzq6o4Tk6CnB30r_KzaSBCem8ByNDnE-MwizfY8_oq2FxubIN8AYLTLqg79TjTdKX4coQl079_PBGqJ-B-ZXQhNx-WGxM' }} 
+                  style={[StyleSheet.absoluteFill, { opacity: 0.6 }]}
+                />
+                <LinearGradient 
+                  colors={['rgba(26,35,126,0.9)', 'rgba(26,35,126,0.1)']} 
+                  style={styles.promoGradient}
+                  start={{ x: 0, y: 0 }} 
+                  end={{ x: 1, y: 0 }}
+                />
+                <View style={styles.promoContent}>
+                  <Text style={styles.promoTag}>ƯU ĐÃI EWA THÁNG 10</Text>
+                  <Text style={styles.promoTitle}>Giảm 20% khi thanh toán{'\n'}hóa đơn điện nước</Text>
+                  <TouchableOpacity style={styles.promoBtn}>
+                    <Text style={styles.promoBtnText}>Nhận mã ngay</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-            </View>
+            )}
 
-            {/* Categories Bento Grid */}
+            {/* Categories - Compact when bill data exists */}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>DỊCH VỤ CHÍNH</Text>
               <View style={styles.bentoGrid}>
@@ -177,7 +241,7 @@ export default function BillPaymentScreen() {
                     activeOpacity={0.8}
                   >
                     <View style={[styles.bentoIconBox, { backgroundColor: s.bg }]}>
-                      <Feather name={s.icon as any} size={22} color={s.color} />
+                      <Feather name={s.icon as any} size={20} color={s.color} />
                     </View>
                     <Text style={[styles.bentoName, { color: serviceType === s.id ? '#1a237e' : '#1b1b21', fontWeight: serviceType === s.id ? '700' : '600' }]}>{s.name}</Text>
                   </TouchableOpacity>
@@ -194,51 +258,73 @@ export default function BillPaymentScreen() {
 
             {/* Bill Details Card */}
             {billData && (
-              <View style={styles.billCard}>
-                <View style={styles.billHeader}>
-                  <View>
-                    <Text style={styles.billTag}>CHI TIẾT HÓA ĐƠN</Text>
-                    <Text style={styles.billTitle}>Thông tin thanh toán</Text>
-                  </View>
-                  <View style={[styles.statusBadge, { backgroundColor: billData.status === 'PAID' ? colors.slate100 : colors.emerald50 }]}>
-                    <Text style={[styles.statusText, { color: billData.status === 'PAID' ? colors.slate500 : colors.emerald600 }]}>
-                      {billData.status === 'PAID' ? 'ĐÃ THANH TOÁN' : 'CHƯA THANH TOÁN'}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.billDetails}>
-                  <View style={styles.detailRow}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.detailLabel}>Tên khách hàng</Text>
-                      <Text style={styles.detailValue}>{billData.customerName}</Text>
+              <>
+                <View style={styles.billCard}>
+                  <View style={styles.billHeader}>
+                    <View>
+                      <Text style={styles.billTag}>CHI TIẾT HÓA ĐƠN</Text>
+                      <Text style={styles.billTitle}>Thông tin thanh toán</Text>
                     </View>
-                    <View style={{ alignItems: 'flex-end' }}>
-                      <Text style={styles.detailLabel}>Kỳ thanh toán</Text>
-                      <Text style={styles.detailValue}>{billData.period}</Text>
+                    <View style={[styles.statusBadge, { backgroundColor: billData.status === 'PAID' ? colors.slate100 : colors.emerald50 }]}>
+                      <Text style={[styles.statusText, { color: billData.status === 'PAID' ? colors.slate500 : colors.emerald600 }]}>
+                        {billData.status === 'PAID' ? 'ĐÃ THANH TOÁN' : 'CHƯA THANH TOÁN'}
+                      </Text>
                     </View>
-                  </View>
-                  
-                  <View style={styles.detailRowAlt}>
-                    <Text style={styles.detailLabel}>Địa chỉ</Text>
-                    <Text style={styles.detailValue}>{billData.address}</Text>
                   </View>
 
-                  <View style={styles.amountBox}>
-                    <Text style={styles.detailLabel}>Số tiền cần trả</Text>
-                    <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 4 }}>
-                      <Text style={styles.amountText}>{fmt(billData.amount)}</Text>
-                      <Text style={styles.amountCurrency}>đ</Text>
+                  <View style={styles.billDetails}>
+                    <View style={styles.detailRow}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.detailLabel}>Tên khách hàng</Text>
+                        <Text style={styles.detailValue}>{billData.customerName}</Text>
+                      </View>
+                      <View style={{ alignItems: 'flex-end' }}>
+                        <Text style={styles.detailLabel}>Kỳ thanh toán</Text>
+                        <Text style={styles.detailValue}>{billData.period}</Text>
+                      </View>
                     </View>
-                    {billData.amount > limit && (
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
-                        <Feather name="alert-circle" size={12} color={colors.red500} />
-                        <Text style={styles.limitError}>Vượt hạn mức ({fmt(limit)}đ)</Text>
+                    
+                    <View style={styles.detailRowAlt}>
+                      <Text style={styles.detailLabel}>Địa chỉ</Text>
+                      <Text style={styles.detailValue}>{billData.address}</Text>
+                    </View>
+
+                    <View style={styles.amountBox}>
+                      <Text style={styles.detailLabel}>Số tiền cần trả</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 4 }}>
+                        <Text style={styles.amountText}>{fmt(billData.amount)}</Text>
+                        <Text style={styles.amountCurrency}>đ</Text>
+                      </View>
+                      {billData.amount > limit && (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                          <Feather name="alert-circle" size={12} color={colors.red500} />
+                          <Text style={styles.limitError}>Vượt hạn mức ({fmt(limit)}đ)</Text>
+                        </View>
+                      )}
+                    </View>
+
+                    {/* Payment Button - Inside bill card */}
+                    {billData.status === 'UNPAID' && (
+                      <View style={{ marginTop: 16 }}>
+                        <TouchableOpacity
+                          onPress={handleShowConfirm}
+                          disabled={billData.amount > limit || billData.amount === 0}
+                          style={[styles.payBtn, (billData.amount > limit || billData.amount === 0) && { opacity: 0.4 }]}
+                          activeOpacity={0.85}
+                        >
+                          <LinearGradient colors={[colors.primary, colors.indigo400]} style={styles.payGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
+                            <Text style={styles.payText}>Thanh toán ngay</Text>
+                          </LinearGradient>
+                        </TouchableOpacity>
+                        <View style={[styles.securityRow, { marginTop: 10 }]}>
+                          <Feather name="shield" size={12} color={colors.slate400} />
+                          <Text style={styles.securityText}>Giao dịch được bảo mật bởi chuẩn PCI DSS</Text>
+                        </View>
                       </View>
                     )}
                   </View>
                 </View>
-              </View>
+              </>
             )}
 
             {/* Recent Bills (Mock) - Only show if no bill data and no error */}
@@ -331,26 +417,6 @@ export default function BillPaymentScreen() {
 
           </View>
         </ScrollView>
-
-        {/* Fixed Bottom CTA */}
-        {billData && billData.status === 'UNPAID' && (
-          <View style={styles.bottomBar}>
-            <TouchableOpacity
-              onPress={handleShowConfirm}
-              disabled={billData.amount > limit || billData.amount === 0}
-              style={[styles.payBtn, (billData.amount > limit || billData.amount === 0) && { opacity: 0.4 }]}
-              activeOpacity={0.85}
-            >
-              <LinearGradient colors={[colors.primary, colors.indigo400]} style={styles.payGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
-                <Text style={styles.payText}>Thanh toán ngay</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-            <View style={styles.securityRow}>
-              <Feather name="shield" size={14} color={colors.slate400} />
-              <Text style={styles.securityText}>Giao dịch được bảo mật bởi chuẩn PCI DSS</Text>
-            </View>
-          </View>
-        )}
       </KeyboardAvoidingView>
 
       <ConfirmSheet
@@ -368,7 +434,7 @@ export default function BillPaymentScreen() {
         confirmLabel="Đồng ý thanh toán"
         loading={paying}
         onConfirm={handlePay}
-        onCancel={() => setShowConfirm(false)}
+        onCancel={handleCancelConfirm}
       />
     </SafeAreaView>
   );
@@ -377,7 +443,7 @@ export default function BillPaymentScreen() {
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#fbf8ff' },
   scroll: { flex: 1 },
-  content: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 24, gap: 24 },
+  content: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 20, gap: 16 },
   section: { gap: 12 },
   sectionTitle: { fontSize: 13, fontWeight: '700', color: '#454652', letterSpacing: 0.5, textTransform: 'uppercase' },
   
@@ -391,37 +457,37 @@ const styles = StyleSheet.create({
   // Promo Banner
   promoBanner: {
     backgroundColor: '#000666',
-    borderRadius: 16,
+    borderRadius: 12,
     overflow: 'hidden',
     position: 'relative',
-    height: 140, // Match 21:9 aspect roughly
+    height: 100,
   },
   promoGradient: { ...StyleSheet.absoluteFillObject },
-  promoContent: { flex: 1, justifyContent: 'center', paddingHorizontal: 24 },
-  promoTag: { fontSize: 10, fontWeight: '800', color: '#d9e2ff', letterSpacing: 1.5, marginBottom: 8 },
-  promoTitle: { fontSize: 18, fontWeight: '900', color: '#ffffff', lineHeight: 24, marginBottom: 16 },
-  promoBtn: { backgroundColor: '#0056c5', paddingHorizontal: 16, paddingVertical: 6, borderRadius: 8, alignSelf: 'flex-start' },
-  promoBtnText: { fontSize: 12, fontWeight: '800', color: '#ffffff' },
+  promoContent: { flex: 1, justifyContent: 'center', paddingHorizontal: 20 },
+  promoTag: { fontSize: 9, fontWeight: '800', color: '#d9e2ff', letterSpacing: 1.2, marginBottom: 6 },
+  promoTitle: { fontSize: 15, fontWeight: '900', color: '#ffffff', lineHeight: 20, marginBottom: 12 },
+  promoBtn: { backgroundColor: '#0056c5', paddingHorizontal: 14, paddingVertical: 5, borderRadius: 6, alignSelf: 'flex-start' },
+  promoBtnText: { fontSize: 11, fontWeight: '800', color: '#ffffff' },
 
   // Bento Grid
   bentoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'space-between' },
   bentoCard: {
     width: '31%',
     backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 12,
+    padding: 12,
     alignItems: 'center',
     shadowColor: '#1a237e',
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
-    shadowRadius: 12,
+    shadowRadius: 8,
     elevation: 2,
     borderWidth: 1,
     borderColor: 'transparent',
   },
   bentoCardActive: { borderColor: '#1a237e', backgroundColor: '#f5f2fb' },
-  bentoIconBox: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
-  bentoName: { fontSize: 11, fontWeight: '600', color: '#1b1b21', textAlign: 'center' },
+  bentoIconBox: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', marginBottom: 6 },
+  bentoName: { fontSize: 10, fontWeight: '600', color: '#1b1b21', textAlign: 'center' },
 
   // Recent Bills
   recentHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
@@ -458,30 +524,40 @@ const styles = StyleSheet.create({
   },
   errorText: { color: colors.red600, fontSize: 14, fontWeight: '500' },
   billCard: {
-    backgroundColor: colors.white, borderRadius: 16, padding: 20,
+    backgroundColor: colors.white, borderRadius: 12, padding: 16,
     borderWidth: 1, borderColor: colors.slate100, ...shadows.md,
   },
-  billHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 },
-  billTag: { fontSize: 10, fontWeight: '700', color: colors.primary, letterSpacing: 1.5, marginBottom: 4 },
-  billTitle: { fontSize: 18, fontWeight: '700', color: colors.slate900 },
-  statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
-  statusText: { fontSize: 10, fontWeight: '700' },
-  billDetails: { gap: 16 },
-  detailRow: { flexDirection: 'row', justifyContent: 'space-between', borderBottomWidth: 1, borderBottomColor: colors.slate50, borderStyle: 'dashed', paddingBottom: 16 },
-  detailRowAlt: { gap: 4 },
-  detailLabel: { fontSize: 11, color: colors.slate400, fontWeight: '500' },
-  detailValue: { fontSize: 14, fontWeight: '700', color: colors.slate800 },
-  amountBox: { marginTop: 4 },
-  amountText: { fontSize: 32, fontWeight: '900', color: colors.indigo600, letterSpacing: -1 },
-  amountCurrency: { fontSize: 18, fontWeight: '700', color: colors.indigo600 },
+  billHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 },
+  billTag: { fontSize: 9, fontWeight: '700', color: colors.primary, letterSpacing: 1.2, marginBottom: 3 },
+  billTitle: { fontSize: 16, fontWeight: '700', color: colors.slate900 },
+  statusBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 16 },
+  statusText: { fontSize: 9, fontWeight: '700' },
+  billDetails: { gap: 12 },
+  detailRow: { flexDirection: 'row', justifyContent: 'space-between', borderBottomWidth: 1, borderBottomColor: colors.slate50, borderStyle: 'dashed', paddingBottom: 12 },
+  detailRowAlt: { gap: 3 },
+  detailLabel: { fontSize: 10, color: colors.slate400, fontWeight: '500' },
+  detailValue: { fontSize: 13, fontWeight: '700', color: colors.slate800 },
+  amountBox: { marginTop: 2 },
+  amountText: { fontSize: 28, fontWeight: '900', color: colors.indigo600, letterSpacing: -1 },
+  amountCurrency: { fontSize: 16, fontWeight: '700', color: colors.indigo600 },
   limitError: { fontSize: 11, color: colors.red500, fontWeight: '600' },
+  paymentSection: {
+    marginTop: 24,
+    paddingTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: colors.slate100,
+  },
   bottomBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     paddingHorizontal: 20, paddingBottom: Platform.OS === 'ios' ? 24 : 16, paddingTop: 16,
     backgroundColor: 'rgba(255,255,255,0.95)', borderTopWidth: 1, borderTopColor: colors.slate100,
   },
   payBtn: { borderRadius: 12, overflow: 'hidden', ...shadows.primary },
-  payGradient: { paddingVertical: 16, alignItems: 'center' },
-  payText: { color: '#fff', fontSize: 16, fontWeight: '700' },
-  securityRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 12 },
-  securityText: { fontSize: 11, color: colors.slate400, fontWeight: '500' },
+  payGradient: { paddingVertical: 14, alignItems: 'center' },
+  payText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  securityRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
+  securityText: { fontSize: 10, color: colors.slate400, fontWeight: '500' },
 });
