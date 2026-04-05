@@ -1,7 +1,12 @@
 import React from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet, ScrollView,
   Alert,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -10,31 +15,42 @@ import { useNavigation } from '@react-navigation/native';
 import { useApp } from '../context/AppContext';
 import { colors, shadows } from '../theme/colors';
 
-const MENU_SECTIONS = [
+type MenuAction = 'employee-info' | 'link-bank' | 'devices' | 'notifications' | 'security' | 'terms' | 'support' | 'rating';
+
+type MenuItem = {
+  icon: string;
+  label: string;
+  action: MenuAction;
+};
+
+const PROFILE_SECTIONS: { title: string; items: MenuItem[] }[] = [
   {
     title: 'TÀI KHOẢN',
     items: [
-      { icon: 'credit-card', label: 'Thông tin nhân viên', desc: 'Lương, ngày công, bộ phận', color: colors.indigo600, bg: colors.indigo50 },
-      { icon: 'underline', label: 'Ngân hàng liên kết', desc: 'Quản lý tài khoản nhận tiền', color: colors.emerald600, bg: colors.emerald50, screen: 'LinkBank' },
-      { icon: 'smartphone', label: 'Thiết bị đăng nhập', desc: 'Quản lý các phiên hoạt động', color: colors.blue500, bg: colors.blue50 },
+      { icon: 'badge-account-horizontal-outline', label: 'Thông tin nhân viên', action: 'employee-info' },
+      { icon: 'bank-outline', label: 'Ngân hàng liên kết', action: 'link-bank' },
+      { icon: 'cellphone-link', label: 'Thiết bị đăng nhập', action: 'devices' },
     ],
   },
   {
     title: 'CÀI ĐẶT',
     items: [
-      { icon: 'bell', label: 'Thông báo', desc: 'Tùy chỉnh thông báo giao dịch', color: colors.amber600, bg: colors.amber50 },
-      { icon: 'shield', label: 'Bảo mật', desc: 'Mật khẩu, FaceID, mã PIN', color: colors.purple, bg: colors.purple50 },
+      { icon: 'bell-ring-outline', label: 'Thông báo', action: 'notifications' },
+      { icon: 'shield-check-outline', label: 'Bảo mật', action: 'security' },
     ],
   },
   {
     title: 'KHÁC',
     items: [
-      { icon: 'file-text', label: 'Điều khoản sử dụng', desc: 'Chính sách bảo mật & sử dụng', color: colors.slate600, bg: colors.slate100 },
-      { icon: 'help-circle', label: 'Trung tâm hỗ trợ', desc: 'Câu thường gặp & liên hệ', color: colors.teal600, bg: colors.teal50 },
-      { icon: 'star', label: 'Đánh giá ứng dụng', desc: 'Góp ý để chúng tôi hoàn thiện', color: colors.amber500, bg: colors.amber50 },
+      { icon: 'file-document-outline', label: 'Điều khoản', action: 'terms' },
+      { icon: 'headset', label: 'Hỗ trợ', action: 'support' },
+      { icon: 'star-outline', label: 'Đánh giá', action: 'rating' },
     ],
   },
 ];
+
+const PROFILE_IMAGE =
+  'https://lh3.googleusercontent.com/aida-public/AB6AXuAtgGHEZcBhR3Rr2E1gKVQ6t79m8YETipj1g5Tk-HoExtMUqny_U8d9DsbLoVbdq2nQQAsIsjIUcrJQ98XqOI7luS0dGwoLPeqo5ieZ2pzRlSIA3el3QfJW9EpJmi7X9rw736ElV6-Zv1foUtxqO09-wF-BgpejFy36CWp6WvlDfghlFMcFQh2aXF8pvGKtGp_ltQPjjeOZikqx_vhbnxnOaWFoOf1RZn4UISypaL3pG-5tSN4HyPc46200d0ASWlyPtTOpI2dAzZEz';
 
 export default function ProfileScreen() {
   const navigation = useNavigation<any>();
@@ -42,159 +58,347 @@ export default function ProfileScreen() {
 
   if (!employee) return null;
 
-  const initials = employee.name
-    .split(' ')
-    .map(w => w[0])
-    .slice(-2)
-    .join('')
-    .toUpperCase();
+  const linkedBankCount = employee.linkedBank ? 1 : 0;
+  const memberTier = employee.linkedBank ? 'STANDARD' : 'BASIC';
+
+  const handleComingSoon = (title: string) => {
+    Alert.alert(title, 'Tính năng này sẽ được hoàn thiện ở bản cập nhật tiếp theo.');
+  };
+
+  const handleMenuPress = (item: MenuItem) => {
+    if (item.action === 'link-bank') {
+      navigation.navigate('LinkBank');
+      return;
+    }
+
+    const titleMap: Record<MenuAction, string> = {
+      'employee-info': 'Thông tin nhân viên',
+      'link-bank': 'Ngân hàng liên kết',
+      devices: 'Thiết bị đăng nhập',
+      notifications: 'Thông báo',
+      security: 'Bảo mật',
+      terms: 'Điều khoản',
+      support: 'Hỗ trợ',
+      rating: 'Đánh giá',
+    };
+
+    handleComingSoon(titleMap[item.action]);
+  };
 
   const handleLogout = () => {
     Alert.alert(
-      "Đăng xuất",
-      "Bạn có chắc chắn muốn đăng xuất khỏi tài khoản?",
+      'Đăng xuất',
+      'Bạn có chắc chắn muốn đăng xuất khỏi tài khoản?',
       [
-        { text: "Hủy", style: "cancel" },
-        { 
-          text: "Đăng xuất", 
-          style: "destructive",
+        { text: 'Hủy', style: 'cancel' },
+        {
+          text: 'Đăng xuất',
+          style: 'destructive',
           onPress: async () => {
             await logout();
-          }
-        }
+          },
+        },
       ]
     );
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Tài khoản</Text>
-        <View style={styles.headerIconBox}>
-          <Feather name="user" size={20} color={colors.indigo600} />
+    <SafeAreaView style={styles.safeArea}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.contentContainer}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.headerButton} activeOpacity={0.8} onPress={() => handleComingSoon('Menu')}>
+            <Feather name="menu" size={26} color={colors.indigo900} />
+          </TouchableOpacity>
+          <Text style={styles.brandText}>EWA</Text>
+          <TouchableOpacity style={styles.headerButton} activeOpacity={0.8} onPress={() => handleComingSoon('Thông báo')}>
+            <Feather name="bell" size={22} color={colors.indigo900} />
+          </TouchableOpacity>
         </View>
-      </View>
 
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Profile Card */}
-        <View style={styles.profileCard}>
-          <View style={styles.profileMain}>
-            <LinearGradient colors={[colors.primary, colors.indigo400]} style={styles.avatarBox}>
-              <Text style={styles.avatarText}>{initials}</Text>
-            </LinearGradient>
-            <View style={styles.profileInfo}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
-                <Text style={styles.profileName} numberOfLines={1} ellipsizeMode="tail">{employee.name}</Text>
-                <View style={styles.kycBadge}>
-                  <MaterialCommunityIcons name="check-decagram" size={14} color={colors.emerald600} />
-                  <Text style={styles.kycText}>Đã KYC</Text>
+        <LinearGradient
+          colors={['#162B90', '#1F5DC5']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.heroCard}
+        >
+          <View style={styles.heroTop}>
+            <View style={styles.identityRow}>
+              <View style={styles.avatarFrame}>
+                <Image source={{ uri: PROFILE_IMAGE }} style={styles.avatarImage} />
+              </View>
+              <View style={styles.identityText}>
+                <Text style={styles.employeeName} numberOfLines={1}>
+                  {employee.name}
+                </Text>
+                <View style={styles.metaRow}>
+                  <View style={styles.kycBadge}>
+                    <MaterialCommunityIcons name="check-decagram" size={14} color={colors.white} />
+                    <Text style={styles.kycText}>Đã KYC</Text>
+                  </View>
+                  <Text style={styles.employeeId}>ID: {employee.id}</Text>
                 </View>
               </View>
-              <Text style={styles.profileId}>Mã NV: <Text style={styles.idHighlight}>{employee.id}</Text></Text>
-              <Text style={styles.profilePhone}>{employee.phone}</Text>
             </View>
+
+            <TouchableOpacity style={styles.editButton} activeOpacity={0.85} onPress={() => handleComingSoon('Chỉnh sửa hồ sơ')}>
+              <Feather name="edit-2" size={18} color={colors.white} />
+            </TouchableOpacity>
           </View>
 
           <View style={styles.statsRow}>
-            <View style={styles.statItem}>
+            <View style={styles.statCard}>
+              <Text style={styles.statLabel}>NGÀY CÔNG</Text>
               <Text style={styles.statValue}>{employee.workingDays}</Text>
-              <Text style={styles.statLabel}>Ngày công</Text>
             </View>
-            <View style={[styles.statItem, styles.statDivider]}>
-              <Text style={styles.statValue}>{employee.linkedBank ? '1' : '0'}</Text>
-              <Text style={styles.statLabel}>TK liên kết</Text>
+            <View style={styles.statCard}>
+              <Text style={styles.statLabel}>TK LIÊN KẾT</Text>
+              <Text style={styles.statValue}>{linkedBankCount}</Text>
             </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>Standard</Text>
-              <Text style={styles.statLabel}>Hạng thẻ</Text>
+            <View style={styles.statCard}>
+              <Text style={styles.statLabel}>HẠNG THẺ</Text>
+              <Text style={styles.statValueSmall}>{memberTier}</Text>
             </View>
           </View>
-        </View>
+        </LinearGradient>
 
-        {/* Menu Sections */}
-        {MENU_SECTIONS.map((section) => (
+        {PROFILE_SECTIONS.map((section) => (
           <View key={section.title} style={styles.section}>
             <Text style={styles.sectionTitle}>{section.title}</Text>
-            <View style={styles.menuGroup}>
-              {section.items.map((item, i) => (
+            <View style={styles.sectionCard}>
+              {section.items.map((item, index) => (
                 <TouchableOpacity
                   key={item.label}
-                  style={[styles.menuItem, i < section.items.length - 1 && styles.menuItemBorder]}
-                  onPress={() => item.screen && navigation.navigate(item.screen)}
-                  activeOpacity={0.7}
+                  style={[styles.menuItem, index < section.items.length - 1 && styles.menuItemBorder]}
+                  activeOpacity={0.78}
+                  onPress={() => handleMenuPress(item)}
                 >
-                  <View style={[styles.menuIconBox, { backgroundColor: item.bg }]}>
-                    <Feather name={item.icon as any} size={20} color={item.color} />
+                  <View style={styles.menuIconBox}>
+                    <MaterialCommunityIcons name={item.icon as any} size={24} color={colors.indigo900} />
                   </View>
-                  <View style={styles.menuText}>
-                    <Text style={styles.menuLabel}>{item.label}</Text>
-                    <Text style={styles.menuDesc}>{item.desc}</Text>
-                  </View>
-                  <Feather name="chevron-right" size={16} color={colors.slate300} />
+                  <Text style={styles.menuLabel}>{item.label}</Text>
+                  <Feather name="chevron-right" size={22} color={colors.slate400} />
                 </TouchableOpacity>
               ))}
             </View>
           </View>
         ))}
 
-        {/* Logout Button */}
-        <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout} activeOpacity={0.8}>
-          <Feather name="log-out" size={20} color={colors.red600} />
+        <TouchableOpacity style={styles.logoutButton} activeOpacity={0.85} onPress={handleLogout}>
+          <Feather name="log-out" size={22} color="#B3261E" />
           <Text style={styles.logoutText}>Đăng xuất</Text>
         </TouchableOpacity>
-
-        {/* App Version */}
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>EWA v1.0.0 • Secured by Lumina</Text>
-        </View>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#F7F5FF',
+  },
+  container: {
+    flex: 1,
+  },
+  contentContainer: {
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 120,
+  },
   header: {
-    paddingHorizontal: 24, paddingVertical: 16, flexDirection: 'row',
-    justifyContent: 'space-between', alignItems: 'center',
-    backgroundColor: 'rgba(248, 250, 252, 0.8)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 18,
+    paddingHorizontal: 4,
   },
-  headerTitle: { fontSize: 24, fontWeight: '900', color: colors.slate900, letterSpacing: -0.5 },
-  headerIconBox: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.indigo50, alignItems: 'center', justifyContent: 'center' },
-  scroll: { flex: 1 },
-  scrollContent: { paddingHorizontal: 24, paddingBottom: 120, paddingTop: 8 },
-  profileCard: { backgroundColor: colors.white, borderRadius: 32, padding: 24, ...shadows.md, borderWidth: 1, borderColor: colors.slate100 },
-  profileMain: { flexDirection: 'row', alignItems: 'center', gap: 16 },
-  avatarBox: { width: 72, height: 72, borderRadius: 36, alignItems: 'center', justifyContent: 'center', ...shadows.primary },
-  avatarText: { color: '#fff', fontSize: 24, fontWeight: '900' },
-  profileInfo: { flex: 1, flexShrink: 1 },
-  profileName: { fontSize: 20, fontWeight: '800', color: colors.slate900, flexShrink: 1 },
-  profileId: { fontSize: 13, color: colors.slate500, marginTop: 4 },
-  idHighlight: { fontWeight: '700', color: colors.indigo600 },
-  profilePhone: { fontSize: 13, color: colors.slate400, marginTop: 2 },
-  kycBadge: { backgroundColor: colors.emerald50, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4, flexDirection: 'row', alignItems: 'center', gap: 4 },
-  kycText: { fontSize: 10, fontWeight: '700', color: colors.emerald600 },
-  statsRow: { flexDirection: 'row', marginTop: 32, paddingTop: 24, borderTopWidth: 1, borderTopColor: colors.slate50 },
-  statItem: { flex: 1, alignItems: 'center' },
-  statDivider: { borderLeftWidth: 1, borderRightWidth: 1, borderLeftColor: colors.slate50, borderRightColor: colors.slate50 },
-  statValue: { fontSize: 18, fontWeight: '900', color: colors.slate900, flexShrink: 1 },
-  statLabel: { fontSize: 11, color: colors.slate400, fontWeight: '600', marginTop: 4 },
-  section: { marginTop: 32 },
-  sectionTitle: { fontSize: 11, fontWeight: '800', color: colors.slate400, letterSpacing: 1.5, marginBottom: 12, paddingLeft: 8 },
-  menuGroup: { backgroundColor: colors.white, borderRadius: 32, overflow: 'hidden', ...shadows.sm, borderWidth: 1, borderColor: colors.slate100 },
-  menuItem: { flexDirection: 'row', alignItems: 'center', padding: 20, gap: 16 },
-  menuItemBorder: { borderBottomWidth: 1, borderBottomColor: colors.slate50 },
-  menuIconBox: { width: 48, height: 48, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
-  menuText: { flex: 1 },
-  menuLabel: { fontSize: 15, fontWeight: '800', color: colors.slate900 },
-  menuDesc: { fontSize: 12, color: colors.slate400, marginTop: 2 },
-  logoutBtn: {
-    marginTop: 32, backgroundColor: '#fef2f2', borderRadius: 32, paddingVertical: 20,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12,
-    borderWidth: 1, borderColor: '#fee2e2',
+  headerButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  logoutText: { color: colors.red600, fontSize: 16, fontWeight: '800' },
-  footer: { marginTop: 40, alignItems: 'center' },
-  footerText: { fontSize: 11, color: colors.slate300, fontWeight: '500' },
+  brandText: {
+    fontSize: 28,
+    fontWeight: '900',
+    color: colors.indigo900,
+    letterSpacing: -0.8,
+  },
+  heroCard: {
+    borderRadius: 30,
+    padding: 20,
+    paddingTop: 28,
+    paddingBottom: 24,
+    ...shadows.lg,
+  },
+  heroTop: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  identityRow: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+  },
+  avatarFrame: {
+    width: 86,
+    height: 86,
+    padding: 6,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255,255,255,0.16)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 18,
+  },
+  identityText: {
+    flex: 1,
+    paddingRight: 6,
+  },
+  employeeName: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: colors.white,
+    letterSpacing: -0.4,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginTop: 8,
+  },
+  kycBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.14)',
+  },
+  kycText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: colors.white,
+  },
+  employeeId: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: 'rgba(255,255,255,0.7)',
+  },
+  editButton: {
+    width: 54,
+    height: 54,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.14)',
+  },
+  statsRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 24,
+  },
+  statCard: {
+    flex: 1,
+    minHeight: 92,
+    borderRadius: 22,
+    paddingVertical: 16,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.12)',
+  },
+  statLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: 'rgba(255,255,255,0.62)',
+    letterSpacing: 1.3,
+    textAlign: 'center',
+  },
+  statValue: {
+    marginTop: 14,
+    fontSize: 24,
+    fontWeight: '900',
+    color: colors.white,
+    letterSpacing: -0.5,
+  },
+  statValueSmall: {
+    marginTop: 14,
+    fontSize: 15,
+    fontWeight: '900',
+    color: colors.white,
+    letterSpacing: 0.3,
+    textAlign: 'center',
+  },
+  section: {
+    marginTop: 30,
+  },
+  sectionTitle: {
+    marginBottom: 12,
+    marginLeft: 10,
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#2F2E41',
+    letterSpacing: 3,
+  },
+  sectionCard: {
+    borderRadius: 30,
+    backgroundColor: colors.white,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    ...shadows.sm,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 18,
+  },
+  menuItemBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F0F8',
+  },
+  menuIconBox: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F3F0FB',
+  },
+  menuLabel: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#14142B',
+  },
+  logoutButton: {
+    marginTop: 30,
+    borderRadius: 22,
+    backgroundColor: '#FFDAD6',
+    paddingVertical: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+  },
+  logoutText: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: '#B3261E',
+  },
 });
